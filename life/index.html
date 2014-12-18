@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script type="text/javascript" src="life.js"></script>
+    <script type="text/javascript" src="drawing.js"></script>
+    <script type="text/javascript" src="ship.js"></script>
+    <script type="text/javascript" src="drawing.js"></script>
+    <script type="text/javascript" src="gameNode.js"></script>
+    <script type="text/javascript" src="gameText.js"></script>
+    <script type="text/javascript" src="gamePhilosophy.js"></script>
+    <script type="text/javascript" src="gameItem.js"></script>
+    <link rel="stylesheet" type="text/css" href="life.css" media="screen"/>
+</head>
+<body onkeydown="onKeyDown(event)" onkeyup="onKeyUp(event)">
+
+
+
+<div align="center">
+    <canvas id="canvasGame" width="1000" height="500" onclick="onClick(event)">
+        <script>
+            loadGame();
+        </script>
+    </canvas>
+    <audio id="song" src="relative_mirrors.wav" controls="controls" hidden autoplay loop>
+        <script>
+            var song = document.getElementById("song");
+            song.volume = 0.6;
+        </script>
+    </audio>
+</div>
+
+<small hidden>
+Just hold left/right arrow keys for change direction of your life.
+And use up/down keys for change speed of your life.
+
+Do not waste your time in vain. I hope your life worth living.
+</small>
+
+</body>
+</html>
