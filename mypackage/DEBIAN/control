@@ -1,0 +1,9 @@
+Package: mypackage
+Priority: optional
+Section: devel
+Installed-Size: 100
+Maintainer: John Hancock 
+Architecture: i386 
+Version: 1.0
+Depends: libc6 (>= 2.1)
+Description: This is just a test package.
