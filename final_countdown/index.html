@@ -1,0 +1,55 @@
+<html>
+<head>
+	<link href='https://fonts.googleapis.com/css?family=Poiret+One' rel='stylesheet' type='text/css'>
+	<style>
+		.text
+		{
+			margin: 40px;
+			font-size: 70pt;
+			font-family:Poiret One;
+			margin-top:10%;
+			color: white;
+		}
+		.timer
+		{
+			font-size: 80pt;
+			font-family:Poiret One;
+			color: white;
+		}
+		body
+		{
+			background-color: black;
+		}
+	</style>
+</head>
+<body onload="refresh_time()">
+	<script>
+	function pluralize(value, name)
+	{
+		if (value == 1)
+			return value + " " + name;
+		return value + " " + name + "s";
+	}
+	function refresh_time()
+	{
+		var cur = new Date().getTime();
+		var final_time = Date.UTC(2016, 4, 19, 10 - 7); //UTC+7h
+		var delta = (final_time - cur) / 1000;
+		var timer = document.getElementById("timer");
+		var seconds = (delta % 60) | 0;
+		delta /= 60;
+		var minutes = (delta % 60) | 0;
+		delta /= 60;
+		var hours = (delta % 24) | 0;
+		delta /= 24;
+		var days = (delta | 0);
+		timer.innerHTML = pluralize(days, "day") + "<br>" + pluralize(hours, "hour") + "<br>" + pluralize(minutes, "minute") + "<br>" + pluralize(seconds, "second");
+		setTimeout(refresh_time, 500);
+	}
+	</script>
+	<center>
+		<div class="text">It's a Final Countdown</div>
+		<div class="timer" id="timer" ></div>
+	</center>
+</body>
+</html>
