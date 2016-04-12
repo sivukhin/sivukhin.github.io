@@ -22,9 +22,19 @@
 		}
 		body
 		{
+			margin: 2%;
 			background-color: black;
 		}
-		.main_content
+		.small_timer
+		{
+			position: relative;
+			font-size: 20pt;
+			font-family:Poiret One;
+			color: white;
+			top: 5%;
+			right: 5%;
+		}
+		.content
 		{
 			margin-top: 5%;
 		}
@@ -51,28 +61,26 @@
 		var hours = (delta % 24) | 0;
 		delta /= 24;
 		var days = (delta | 0);
-		timer.innerHTML = pluralize(days, "day") + "<br>" + pluralize(hours, "hour") + "<br>" + pluralize(minutes, "minute") + "<br>" + pluralize(seconds, "second");
+		timer.innerHTML = days + ":" + hours + ":" + minutes + ":" + seconds;
 		setTimeout(refresh_time, 500);
 	}
 	</script>
+	<table width="100%">
+	<tr>
+		<td>
+			<div align="left"><a class="link" href="./index.html">Home</a></div>
+		</td>
+		<td>
+			<div class="small_timer" id="timer" align="right"></div>
+		</td>
+	</tr>
+	</table>
 	<center>
-		<table class="main_content" width="100%">
-		<tr align="center" height="100px">
-			<td width="10%">
-				<div class="text">Links</div>
-			</td>
-			<td rowspan="4">
-				<div class="main_timer">
-					<div class="text">It's a Final Countdown</div>
-					<div class="timer" id="timer" ></div>
-			</td>
-		</tr>
-		<tr align="center">
-			<td valign="top">
-				<a href="coub.html" class="link">12.04.2016</a>
-			</td>
-		</tr>
-		</table>
+		<div class="content">
+			<a href="http://coub.com/view/bv7j2">
+				<img src="moscow_take_lead.png" alt="Moscow take lead: ACM ICPC 2012"/>
+			</a>
+		</div>
 	</center>
 </body>
 </html>
