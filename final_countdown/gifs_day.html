@@ -46,8 +46,13 @@
 		}
 	</style>
 </head>
-<body onload="refresh_time()">
+<body onload="on_load()">
 	<script>
+	function on_load()
+	{
+		refresh_time();
+		switch_gif();
+	}
 	function pluralize(value, name)
 	{
 		if (value == 1)
@@ -74,8 +79,23 @@
 	{
 		var cur_id = document.getElementById("gif_id").value;
 		var next_id = (+cur_id + 1) % 4;
-		document.getElementById("gif").src = "scary_gif" + next_id + ".gif";	
 		document.getElementById("gif_id").value = next_id;
+
+		var gif = new Image();
+		var loading = new Image();
+		var gifElement = document.getElementById("gif_space");
+		gif.src = "scary_gif" + next_id + ".gif";
+		loading.src = "loading.gif";
+		gif.onload = function() {
+			if (document.getElementById("gif_id").value == next_id)
+			{
+				gifElement.removeChild(gifElement.lastChild);
+				gifElement.appendChild(gif);
+			}
+		};
+		gifElement.removeChild(gifElement.lastChild);
+		gifElement.appendChild(loading);
+
 	}
 	</script>
 	<table width="100%">
@@ -92,8 +112,9 @@
 		<div class="content">
 			<div class="small_text">Click for more scary gifs</div>
 			<div class="content">
-				<input type="hidden" id="gif_id" value="0"/>
-				<img id="gif" src="scary_gif0.gif" onclick="switch_gif()"/>	
+				<input type="hidden" id="gif_id" value="-1"/>
+				<div id="gif_space" onclick="switch_gif()">
+				</div>
 			</div>
 		</div>
 	</center>
