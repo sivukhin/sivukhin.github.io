@@ -69,9 +69,9 @@
 		.kek 
 		{
 			font-family: Poiret One;
-			font-size: 25pt;
+			font-size: 20pt;
 			clear: both;
-			margin-left: -1.7em;
+			margin-left: -2.5em;
 		}
 		label 
 		{
@@ -129,7 +129,7 @@
 		input.radio:checked ~ label:before 
 		{
 			content:'\2714';
-			text-indent: .3em;
+			text-indent: .1em;
 			color: white;
 		   background-color: #de5d80;
 		}
@@ -182,7 +182,7 @@
 	}
 
 	var myDataRef = new Firebase('https://amber-torch-6697.firebaseio.com/');
-	var count_variants = 3;
+	var count_variants = 4;
 
 	function send_answer()
 	{
@@ -256,6 +256,9 @@
 				</div>
 				<div class="kek">
 				<input id="radio3" name="radio" type="radio" class="radio"></input><label id="label3" for="radio3">Four russian algorithm <span id="perc3"></span></label>
+				</div>
+				<div class="kek">
+				<input id="radio4" name="radio" type="radio" class="radio"></input><label id="label4" for="radio4">Six japanese algorithm <span id="perc4"></span></label>
 				</div>
 				<input type="submit" class="answer" onclick="send_answer()">Send answer</input>
 			</div>
