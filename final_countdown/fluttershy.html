@@ -1,0 +1,89 @@
+<html>
+<head>
+	<link href='https://fonts.googleapis.com/css?family=Poiret+One' rel='stylesheet' type='text/css'>
+	<style>
+		.text
+		{
+			font-size: 70pt;
+			font-family:Poiret One;
+			color: white;
+		}
+		.timer
+		{
+			font-size: 80pt;
+			font-family:Poiret One;
+			color: white;
+		}
+		.link
+		{
+			font-size: 25pt;
+			font-weight: bold;
+			font-family:Poiret One;
+			color: #de5d83;
+		}
+		body
+		{
+			margin: 2%;
+			background-color: black;
+		}
+		.video
+		{
+			margin: 80px;
+		}
+		.small_timer
+		{
+			font-size: 25pt;
+			font-family:Poiret One;
+			color: white;
+			margin-right: 50px;
+			margin-top: 50px;
+		}
+		.content
+		{
+			margin-top: 2%;
+		}
+	</style>
+</head>
+<body onload="refresh_time()">
+	<script>
+	function pluralize(value, name)
+	{
+		if (value == 1)
+			return value + " " + name;
+		return value + " " + name + "s";
+	}
+	function refresh_time()
+	{
+		var cur = new Date().getTime();
+		var final_time = Date.UTC(2016, 4, 19, 10 - 7); //UTC+7h
+		var delta = (final_time - cur) / 1000;
+		var timer = document.getElementById("timer");
+		var seconds = (delta % 60) | 0;
+		delta /= 60;
+		var minutes = (delta % 60) | 0;
+		delta /= 60;
+		var hours = (delta % 24) | 0;
+		delta /= 24;
+		var days = (delta | 0);
+		timer.innerHTML = days + ":" + hours + ":" + minutes + ":" + seconds;
+		setTimeout(refresh_time, 500);
+	}
+	</script>
+	<table width="100%">
+	<tr>
+		<td>
+			<div align="left"><a class="link" href="./index.html">Home</a></div>
+		</td>
+		<td>
+			<div class="small_timer" id="timer" align="right"></div>
+		</td>
+	</tr>
+	</table>
+	<center>
+		<div class="content">
+			<div class="text">Fluttershy helps me so much!</div>
+			<video class="video" width="600px" src="fluttershy.mp4" loop="loop" autoplay="autoplay"/>
+		</div>
+	</center>
+</body>
+</html>
