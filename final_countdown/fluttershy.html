@@ -42,6 +42,17 @@
 		{
 			margin-top: 2%;
 		}
+		.start
+		{
+			margin-top: 100px;
+			color: #fa2a31;
+		}
+		.alarm
+		{
+			display: inline-block;
+			color:#fa2a31;
+			font-weight: 500;
+		}
 	</style>
 </head>
 <body onload="refresh_time()">
@@ -51,6 +62,15 @@
 		if (value == 1)
 			return value + " " + name;
 		return value + " " + name + "s";
+	}
+	function get_element(value, previous)
+	{
+		var negative = (value <= 0);
+		for (var i = 0; i < previous.length; i++)
+			negative &= (previous[i] <= 0);
+		if (negative)
+			return '<div class="alarm">' + value + '</div>';
+		return value;
 	}
 	function refresh_time()
 	{
@@ -65,7 +85,16 @@
 		var hours = (delta % 24) | 0;
 		delta /= 24;
 		var days = (delta | 0);
-		timer.innerHTML = days + ":" + hours + ":" + minutes + ":" + seconds;
+		if (delta <= 0)
+			timer.innerHTML = '<div class="start">Contest started</div>'
+		else
+		{
+			timer.innerHTML = 
+				get_element(days, []) + ":" + 
+				get_element(hours, [days]) + ":" + 
+				get_element(minutes, [days, hours]) + ":" + 
+				get_element(seconds, [days, hours, minutes]);
+		}
 		setTimeout(refresh_time, 500);
 	}
 	</script>
