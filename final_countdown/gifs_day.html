@@ -115,6 +115,7 @@
 		gif.src = "scary_gif" + next_id + ".gif";
 		loading.src = "loading.gif";
 		gif.onload = function() {
+			console.log('Loaded!');
 			if (document.getElementById("gif_id").value == next_id)
 			{
 				gifElement.removeChild(gifElement.lastChild);
