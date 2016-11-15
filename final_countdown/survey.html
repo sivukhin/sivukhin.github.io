@@ -41,7 +41,6 @@
 			font-family:Poiret One;
 			color: white;
 			margin-right: 50px;
-			margin-top: 50px;
 		}
 		.content
 		{
@@ -186,7 +185,7 @@
 	function refresh_time()
 	{
 		var cur = new Date().getTime();
-		var final_time = Date.UTC(2016, 4, 19, 10 - 7); //UTC+7h
+		var final_time = Date.UTC(2017, 5, 24, 10 - 7); //UTC+7h
 		var delta = (final_time - cur) / 1000;
 		var timer = document.getElementById("timer");
 		var seconds = (delta % 60) | 0;
