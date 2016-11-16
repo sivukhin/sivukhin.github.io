@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+   Adaptive site
+  </title>
+  <link href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono" rel="stylesheet"/>
+  <link href="style.css" rel="stylesheet" type="text/css"/>
+  <script src="scripts.js">
+  </script>
+  <meta charset="utf-8"/>
+<link href="gallery_style.css" rel="stylesheet" type="text/css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js">
+</script>
+<script src="gallery_script.js">
+</script>
+ </head>
+ <body>
+  <div class="centered" id="main_wrapper">
+   <header id="header">
+    <div id="logo" onclick="logo_click()">
+     <img id="jake" src="images/jake.png"/>
+     <table>
+      <tr>
+       <td id="1">
+       </td>
+       <td id="2">
+       </td>
+       <td id="3">
+       </td>
+      </tr>
+      <tr>
+       <td id="4">
+       </td>
+       <td id="5">
+       </td>
+       <td id="6">
+       </td>
+      </tr>
+      <tr>
+       <td id="7">
+       </td>
+       <td id="8">
+       </td>
+       <td id="9">
+       </td>
+      </tr>
+     </table>
+    </div>
+    <div id="title">
+     Site with simple prekols
+    </div>
+   </header>
+   <div class="centering_wrapper">
+    <nav id="navigation">
+     <div class="nav_item shadowed_element">
+      <a href="index.html">
+       Main page
+      </a>
+     </div>
+     <div class="nav_item shadowed_element">
+      <a href="prekols.html">
+       Simple prekols
+      </a>
+     </div>
+     <div class="nav_item shadowed_element">
+      <a href="links.html">
+       Useful links
+      </a>
+     </div>
+     <div class="nav_item shadowed_element">
+      <a href="gallery.html">
+       Gallery
+      </a>
+     </div>
+     <div class="nav_item shadowed_element">
+      <a href="contacts.html">
+       Contacts
+      </a>
+     </div>
+    </nav>
+   </div>
+   <div id="site_area">
+    <article class="left_aligned" id="content">
+<h1 class="text_centered">
+ Gallery
+</h1>
+<div id="gallery">
+ <div class="view_panel">
+  <div id="bound_wrapper">
+   <div class="wrapper">
+    <div id="image_container">
+     <img id="selected_image"/>
+     <img id="loading" src="images/download.gif"/>
+    </div>
+    <div class="view_scroll" id="view_scroll_left" onclick="view_shift_left()">
+    </div>
+    <div class="view_scroll" id="view_scroll_right" onclick="view_shift_right()">
+    </div>
+   </div>
+  </div>
+ </div>
+ <div class="images">
+  <div class="preview_pane">
+   <img class="gallery_image" src="resources/preview/preview_image1.jpg"/>
+  </div>
+  <div class="preview_pane">
+   <img class="gallery_image" src="resources/preview/preview_image2.jpg"/>
+  </div>
+  <div class="preview_pane">
+   <img class="gallery_image" src="resources/preview/preview_image3.jpg"/>
+  </div>
+  <div class="preview_pane">
+   <img class="gallery_image" src="resources/preview/preview_image4.jpg"/>
+  </div>
+  <div class="preview_pane">
+   <img class="gallery_image" src="resources/preview/preview_image5.jpg"/>
+  </div>
+  <div class="preview_pane">
+   <img class="gallery_image" src="resources/preview/preview_image6.jpg"/>
+  </div>
+  <div class="preview_pane">
+   <img class="gallery_image" src="resources/preview/preview_image7.jpg"/>
+  </div>
+  <div class="preview_pane">
+   <img class="gallery_image" src="resources/preview/preview_image8.jpg"/>
+  </div>
+ </div>
+ <!--
+    <div id="gallery_navigation">
+        <div id="scroll_area">
+            <div id="scroll_left" class="scroll boxed_element" onclick="shift_left()"></div>
+            <div id="scroll_right" class="scroll boxed_element" onclick="shift_right()"></div>
+        </div>
+    </div>
+    -->
+</div>
+    </article>
+    <aside class="right_aligned" id="sidebar">
+     <div class="sidebar_item">
+      <a href="prekols.html">
+       <img class="sidebar_image" src="images/prekol_link.png"/>
+       <div class="image_caption">
+        Simple prekols
+       </div>
+      </a>
+     </div>
+     <div class="sidebar_item">
+      <a href="links.html">
+       <img class="sidebar_image" src="images/links_link.png"/>
+       <div class="image_caption">
+        Useful links
+       </div>
+      </a>
+     </div>
+     <div class="sidebar_item">
+      <a href="gallery.html">
+       <img class="sidebar_image" src="images/gallery_link.png"/>
+       <div class="image_caption">
+        Gallery
+       </div>
+      </a>
+     </div>
+    </aside>
+   </div>
+   <footer id="footer">
+    Sivukhin Nikita 2016
+   </footer>
+  </div>
+ </body>
+</html>
