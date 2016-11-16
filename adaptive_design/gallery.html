@@ -7,46 +7,20 @@
   </title>
   <link href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono" rel="stylesheet"/>
   <link href="style.css" rel="stylesheet" type="text/css"/>
+  <link href="logo_style.css" rel="stylesheet" type="text/css"/>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js">
+  </script>
   <script src="scripts.js">
   </script>
   <meta charset="utf-8"/>
 <link href="gallery_style.css" rel="stylesheet" type="text/css"/>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js">
-</script>
 <script src="gallery_script.js">
 </script>
  </head>
  <body>
   <div class="centered" id="main_wrapper">
    <header id="header">
-    <div id="logo" onclick="logo_click()">
-     <img id="jake" src="images/jake.png"/>
-     <table>
-      <tr>
-       <td id="1">
-       </td>
-       <td id="2">
-       </td>
-       <td id="3">
-       </td>
-      </tr>
-      <tr>
-       <td id="4">
-       </td>
-       <td id="5">
-       </td>
-       <td id="6">
-       </td>
-      </tr>
-      <tr>
-       <td id="7">
-       </td>
-       <td id="8">
-       </td>
-       <td id="9">
-       </td>
-      </tr>
-     </table>
+    <div id="logo">
     </div>
     <div id="title">
      Site with simple prekols
@@ -94,47 +68,39 @@
      <img id="selected_image"/>
      <img id="loading" src="images/download.gif"/>
     </div>
-    <div class="view_scroll" id="view_scroll_left" onclick="view_shift_left()">
+    <div class="view_scroll" id="view_scroll_left">
     </div>
-    <div class="view_scroll" id="view_scroll_right" onclick="view_shift_right()">
+    <div class="view_scroll" id="view_scroll_right">
     </div>
    </div>
   </div>
  </div>
  <div class="images">
   <div class="preview_pane">
-   <img class="gallery_image" src="resources/preview/preview_image1.jpg"/>
+   <img class="gallery_image" id="0" src="resources/preview/preview_image0.jpg"/>
   </div>
   <div class="preview_pane">
-   <img class="gallery_image" src="resources/preview/preview_image2.jpg"/>
+   <img class="gallery_image" id="1" src="resources/preview/preview_image1.jpg"/>
   </div>
   <div class="preview_pane">
-   <img class="gallery_image" src="resources/preview/preview_image3.jpg"/>
+   <img class="gallery_image" id="2" src="resources/preview/preview_image2.jpg"/>
   </div>
   <div class="preview_pane">
-   <img class="gallery_image" src="resources/preview/preview_image4.jpg"/>
+   <img class="gallery_image" id="3" src="resources/preview/preview_image3.jpg"/>
   </div>
   <div class="preview_pane">
-   <img class="gallery_image" src="resources/preview/preview_image5.jpg"/>
+   <img class="gallery_image" id="4" src="resources/preview/preview_image4.jpg"/>
   </div>
   <div class="preview_pane">
-   <img class="gallery_image" src="resources/preview/preview_image6.jpg"/>
+   <img class="gallery_image" id="5" src="resources/preview/preview_image5.jpg"/>
   </div>
   <div class="preview_pane">
-   <img class="gallery_image" src="resources/preview/preview_image7.jpg"/>
+   <img class="gallery_image" id="6" src="resources/preview/preview_image6.jpg"/>
   </div>
   <div class="preview_pane">
-   <img class="gallery_image" src="resources/preview/preview_image8.jpg"/>
+   <img class="gallery_image" id="7" src="resources/preview/preview_image7.jpg"/>
   </div>
  </div>
- <!--
-    <div id="gallery_navigation">
-        <div id="scroll_area">
-            <div id="scroll_left" class="scroll boxed_element" onclick="shift_left()"></div>
-            <div id="scroll_right" class="scroll boxed_element" onclick="shift_right()"></div>
-        </div>
-    </div>
-    -->
 </div>
     </article>
     <aside class="right_aligned" id="sidebar">
@@ -165,7 +131,7 @@
     </aside>
    </div>
    <footer id="footer">
-    Sivukhin Nikita 2016
+    Sivukhin Nikita © 2016
    </footer>
   </div>
  </body>
