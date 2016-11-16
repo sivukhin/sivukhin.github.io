@@ -1,0 +1,39 @@
+<!-- head -->
+<link href="gallery_style.css" rel="stylesheet" type="text/css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+<script src="gallery_script.js"></script>
+<!-- article id:content -->
+<h1 class="text_centered">Gallery</h1>
+<div id="gallery">
+    <div class="view_panel">
+        <div id="bound_wrapper">
+            <div class="wrapper">
+                <div id="image_container">
+                    <img id="selected_image" />
+                    <img id="loading" src="images/download.gif" />
+                </div>
+                
+                <div class="view_scroll" id="view_scroll_left" onclick="view_shift_left()"></div>
+                <div class="view_scroll" id="view_scroll_right" onclick="view_shift_right()"></div>
+            </div>
+        </div>
+    </div>
+    <div class="images">
+        <div class="preview_pane"><img class="gallery_image" src="resources/preview/preview_image1.jpg"></div>
+        <div class="preview_pane"><img class="gallery_image" src="resources/preview/preview_image2.jpg"></div>
+        <div class="preview_pane"><img class="gallery_image" src="resources/preview/preview_image3.jpg"></div>
+        <div class="preview_pane"><img class="gallery_image" src="resources/preview/preview_image4.jpg"></div>
+        <div class="preview_pane"><img class="gallery_image" src="resources/preview/preview_image5.jpg"></div>
+        <div class="preview_pane"><img class="gallery_image" src="resources/preview/preview_image6.jpg"></div>
+        <div class="preview_pane"><img class="gallery_image" src="resources/preview/preview_image7.jpg"></div>
+        <div class="preview_pane"><img class="gallery_image" src="resources/preview/preview_image8.jpg"></div>
+    </div>
+    <!--
+    <div id="gallery_navigation">
+        <div id="scroll_area">
+            <div id="scroll_left" class="scroll boxed_element" onclick="shift_left()"></div>
+            <div id="scroll_right" class="scroll boxed_element" onclick="shift_right()"></div>
+        </div>
+    </div>
+    -->
+</div>
