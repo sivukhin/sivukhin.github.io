@@ -7,33 +7,35 @@ var hashes = [
   ["1b36ea1c9b7a1c3ad668b8bb5df7963f"]
 ];
 
-function track_press(e, id) {
-    if (e.key == "Enter")
-        guess(id);
-}
+var quizes = undefined;
+$(function() {
+    $(".guess_button").click(guess); 
+    $(".guess_input").keydown(function(e) {
+        if (e.key == "Enter")
+            guess(e);
+    })
+    quizes = $(".quiz_area");
+});
 
 function filterString(value) {
     var filtered = value.replace(/[.,\/#!$%\^&\*;:{}=\-_`~() ]/g,"");
     return filtered.toLowerCase();
 }
 
-function guess(id) {
-    var index = id.id.substring("quiz_".length) - 1;
-    var filteredValue = filterString(id.value)
-    var filteredHash = md5(filteredValue);
-    var ok = false;
-    hashes[index].forEach(function (item, i, arr) {
-       if (item === filteredHash) 
-           ok = true;
-    });
-    var targetImage = document.getElementById("quiz_image_" + (index + 1));
-    if (ok)
-    {
-        targetImage.className = "green_border";
-        var nextQuiz = targetImage.parentElement.nextElementSibling;
-        if (nextQuiz.className.search("quiz_area") != -1)
-            nextQuiz.style.display = "block";
+function guess(e) {
+    var parent = $(e.target).parent();
+    var index = quizes.index(parent);
+    var filteredHash = md5(filterString(parent.find(".guess_input").val()));
+    var matched = hashes[index].includes(filteredHash);
+    if (matched) {
+        parent.find(".quiz_image").removeClass("red_border");
+        parent.find(".quiz_image").addClass("green_border");
+        var next = parent.next();
+        if (next.is(".quiz_area"))
+            next.show();
     }
-    else
-        targetImage.className = "red_border";
+    else {
+        parent.find(".quiz_image").removeClass("green_border");
+        parent.find(".quiz_image").addClass("red_border");
+    }
 }
