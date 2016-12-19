@@ -3,7 +3,7 @@ var selected_image = undefined;
 
 $(function() {
     $(".gallery_image").click(function(e) {
-        preview_image($(e.target).attr('id'));
+        show_image($(e.target).attr('id'));
     }) 
     $("#view_scroll_left").click(function() { view_shift(-1); });
     $("#view_scroll_right").click(function() { view_shift(1); });
@@ -43,7 +43,7 @@ function get_image_source(image_id) {
     return './resources/image' + image_id + '.jpg';
 }
 
-function preview_image(image_id) {
+function show_image(image_id) {
     image_id = parseInt(image_id);
     selected_image = image_id;
     $(".view_panel").show();
@@ -61,6 +61,6 @@ function preview_image(image_id) {
 function view_shift(direction) {
     if (selected_image != undefined) {
         var next_id = (selected_image + direction + gallery_images.length) % gallery_images.length;
-        preview_image(next_id);
+        show_image(next_id);
     }
 }
