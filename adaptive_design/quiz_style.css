@@ -20,7 +20,6 @@
     text-align: center;
 }
 
-
 @media (max-width: 550px) {
     .quiz_area input {
         width: 90%;
