@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<style>
+.future {
+	background-color: #50c878;
+	border: 1px solid gray;
+}
+
+.present {
+	background-color: white;
+	border: 1px solid black;
+}
+
+.past {
+	background-color: #8a6678;
+	border: 1px solid black;
+}
+#life td {
+	width: 10px;
+	height: 10px;
+}
+</style>
+
+<center>
+<h2>Calendar of my life (for 90 years):</h2>
+<table id="life">
+</table>
+</center>
+
+<script>
+		function next_week(d) {
+			var dump = new Date(d.getTime());
+			dump.setDate(dump.getDate() + 7);
+			return dump;
+		}
+		function set_year(d, year) {
+			var dump = new Date(d.getTime());
+			dump.setYear(year);
+			return dump;
+		}
+		function calc_grid_dim(size) {
+			var ratio = window.innerHeight / window.innerWidth;
+			console.log(ratio);
+			var width = Math.sqrt(size / ratio) | 0;
+			var height = (width * ratio) | 0;
+			while (width * height < size) {
+				height += 1;
+			}
+			return [height, width];
+		}
+		function create_week_cell(type) {
+			var td = document.createElement("td");
+			if (type > 0)
+				td.className = 'past';
+			else if (type == 0)
+				td.className = 'present';
+			else
+				td.className = 'future';
+			return td;
+		}
+		function generate_table(target_table, dimensions, middle_id) {
+			for (var i = 0; i < dimensions[0]; i++) {
+				var tr = document.createElement("tr");
+				for (var s = 0; s < dimensions[1]; s++) {
+					middle_id -= 1;
+					var td = create_week_cell(middle_id);
+					tr.appendChild(td);
+				}
+				target_table.appendChild(tr);
+			}
+		}
+		var start_date = new Date(1997, 1, 9);
+		var end_date = set_year(start_date, 1997 + 90);
+		var current_date = new Date(Date.now());
+
+		var count = 0;
+		var passed = 0;
+		console.log(start_date);
+		console.log(end_date);
+		while (start_date < end_date) {
+			start_date = next_week(start_date);
+			count += 1;
+			if (start_date < current_date)
+				passed += 1;
+		}
+		var dimensions = calc_grid_dim(count);	
+		var table = document.getElementById("life");
+		generate_table(table, dimensions, passed);
+</script>
+
+</body>
+</html>
+
