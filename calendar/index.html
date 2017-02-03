@@ -17,8 +17,22 @@
 	background-color: #8a6678;
 	border: 1px solid black;
 }
+
+#caption {
+	position: fixed;
+	font-size: 10pt;
+	background-color: white;
+	padding: 2px;
+	pointer-events: none;
+	font-family: monospace;
+}
+
+#life td:hover {
+	opacity: 0.4;
+}
+
 #life td {
-	width: 10px;
+	min-width: 10px;
 	height: 10px;
 }
 </style>
@@ -33,10 +47,13 @@
 	<input type="date" id="date">
 	<input type="button" onclick="query()" value="Rebuild diagram">
 	</div>
-
+	<div id="caption">!</div>
 </center>
 
 <script>
+		events = [
+			[new Date(2016, 4, 19), '#e6a8d7', 'ACM ICPC World Final 2016'],
+		];
 		function next_week(d) {
 			var dump = new Date(d.getTime());
 			dump.setDate(dump.getDate() + 7);
@@ -47,9 +64,24 @@
 			dump.setYear(year);
 			return dump;
 		}
+		function get_weeks_between(start_date, end_date) {
+			var it = new Date(start_date.getTime());
+			var count = 0;
+			while (it < end_date) {
+				count += 1;
+				it = next_week(it);
+			}
+			return count;
+		}
+		function convert_to_weeks(start_date, e) {
+			var week_info = {};
+			for (var i = 0; i < e.length; i++) {
+				week_info[get_weeks_between(start_date, e[i][0]) - 1] = [e[i][1], e[i][2]];
+			}
+			return week_info;
+		}
 		function calc_grid_dim(size) {
 			var ratio = window.innerHeight / window.innerWidth;
-			console.log(ratio);
 			var width = Math.sqrt(size / ratio) | 0;
 			var height = (width * ratio) | 0;
 			while (width * height < size) {
@@ -67,42 +99,61 @@
 				td.className = 'future';
 			return td;
 		}
-		function generate_table(target_table, dimensions, middle_id) {
+		function show_caption(event) {
+			var caption = document.getElementById("caption");
+			if (event.srcElement.dataset.caption)
+			{
+				console.log(event);
+				caption.style.top = (event.y) + "px";
+				caption.style.left = (event.x) + "px";
+				caption.innerText = event.srcElement.dataset.caption;
+				caption.style.display = "block";
+			}
+		}
+		function hide_caption() {
+			var caption = document.getElementById("caption");
+			caption.style.display = "none";
+		}
+		function generate_table(target_table, dimensions, middle_id, e) {
+			console.log(e);
 			target_table.innerHTML = "";
+			var week_id = 0;
 			for (var i = 0; i < dimensions[0]; i++) {
 				var tr = document.createElement("tr");
 				for (var s = 0; s < dimensions[1]; s++) {
-					var td = create_week_cell(middle_id);
+					var td = create_week_cell(middle_id - week_id);
+					if (week_id in e) {
+						td.style.backgroundColor = e[week_id][0];
+						td.dataset.caption = e[week_id][1];
+					}
+					td.onmouseover = show_caption;
+					td.onmouseout = hide_caption;
+
 					tr.appendChild(td);
-					middle_id -= 1;
+					week_id += 1;
 				}
 				target_table.appendChild(tr);
 			}
 		}
-		function build_diagram(start_date) {
+		function build_diagram(start_date, add_events) {
 			var end_date = set_year(start_date, start_date.getFullYear() + 90);
 			var current_date = new Date(Date.now());
 
-			var count = 0;
-			var passed = 0;
-			console.log(start_date);
-			console.log(end_date);
-			while (start_date < end_date) {
-				start_date = next_week(start_date);
-				count += 1;
-				if (start_date < current_date)
-					passed += 1;
-			}
+			var count = get_weeks_between(start_date, end_date);
+			var passed = get_weeks_between(start_date, current_date) - 1;
+
 			var dimensions = calc_grid_dim(count);	
 			var table = document.getElementById("life");
-			generate_table(table, dimensions, passed);
+			var interesting_events = (add_events ? events : []);
+			interesting_events.push([new Date(Date.now()), 'white', 'Current week']);
+			generate_table(table, dimensions, passed, convert_to_weeks(start_date, interesting_events));
 		}
 		function query() {
 			var d = new Date(document.getElementById("date").value);
 			if (!isNaN(d.getTime()))
-				build_diagram(d);
+				build_diagram(d, false);
 		}
-		build_diagram(new Date(1997, 1, 9));
+		build_diagram(new Date(1997, 1, 9), true);
 </script>
 
 </body>
