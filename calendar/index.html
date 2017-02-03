@@ -24,9 +24,16 @@
 </style>
 
 <center>
-<h2>Calendar of my life (for 90 years):</h2>
-<table id="life">
-</table>
+	<h2>Calendar of my life (for 90 years):</h2>
+	<table id="life">
+	</table>
+
+	<div>
+	Enter another day:
+	<input type="date" id="date">
+	<input type="button" onclick="query()" value="Rebuild diagram">
+	</div>
+
 </center>
 
 <script>
@@ -61,33 +68,41 @@
 			return td;
 		}
 		function generate_table(target_table, dimensions, middle_id) {
+			target_table.innerHTML = "";
 			for (var i = 0; i < dimensions[0]; i++) {
 				var tr = document.createElement("tr");
 				for (var s = 0; s < dimensions[1]; s++) {
-					middle_id -= 1;
 					var td = create_week_cell(middle_id);
 					tr.appendChild(td);
+					middle_id -= 1;
 				}
 				target_table.appendChild(tr);
 			}
 		}
-		var start_date = new Date(1997, 1, 9);
-		var end_date = set_year(start_date, 1997 + 90);
-		var current_date = new Date(Date.now());
+		function build_diagram(start_date) {
+			var end_date = set_year(start_date, start_date.getFullYear() + 90);
+			var current_date = new Date(Date.now());
 
-		var count = 0;
-		var passed = 0;
-		console.log(start_date);
-		console.log(end_date);
-		while (start_date < end_date) {
-			start_date = next_week(start_date);
-			count += 1;
-			if (start_date < current_date)
-				passed += 1;
+			var count = 0;
+			var passed = 0;
+			console.log(start_date);
+			console.log(end_date);
+			while (start_date < end_date) {
+				start_date = next_week(start_date);
+				count += 1;
+				if (start_date < current_date)
+					passed += 1;
+			}
+			var dimensions = calc_grid_dim(count);	
+			var table = document.getElementById("life");
+			generate_table(table, dimensions, passed);
 		}
-		var dimensions = calc_grid_dim(count);	
-		var table = document.getElementById("life");
-		generate_table(table, dimensions, passed);
+		function query() {
+			var d = new Date(document.getElementById("date").value);
+			if (!isNaN(d.getTime()))
+				build_diagram(d);
+		}
+		build_diagram(new Date(1997, 1, 9));
 </script>
 
 </body>
