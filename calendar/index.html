@@ -54,6 +54,8 @@
 		events = [
 			[new Date(2016, 4, 19), '#e6a8d7', 'ACM ICPC World Final 2016'],
 		];
+		for (var year = 0; year < 90; year++)
+			events.push([new Date(1997 + year, 0, 9), 'lightgreen', 'My Birthday']);
 		function next_week(d) {
 			var dump = new Date(d.getTime());
 			dump.setDate(dump.getDate() + 7);
