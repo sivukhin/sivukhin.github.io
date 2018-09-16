@@ -1,0 +1,44 @@
+.external-container {
+	margin-top: 10%;
+	margin-left: 30%;
+}
+.calendar-container {
+	width: 40%;
+	text-align: center;
+}
+
+.date-container {
+}
+
+.date-number {
+	font-family: "Arial", sans-serif;
+	font-size: 120pt;
+}
+
+.date-caption {
+	font-family: "Arial", sans-serif;
+	font-size: 35pt;
+	font-weight: bold;
+}
+
+.important {
+	color: #fa2363;
+}
+
+.separator {
+	margin: 32pt 0px;
+	display: block;
+	height: 6pt;
+    background: url('separator.png') no-repeat top center;
+	background-size: contain;
+}
+
+.celebration {
+	height: 70pt;
+	line-height: 70pt;
+}
+
+.date-advice {
+	font-family: "Arial", serif;
+	font-style: italic;
+}
