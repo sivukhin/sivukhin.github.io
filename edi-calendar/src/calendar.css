@@ -1,9 +1,9 @@
 .external-container {
-	margin-top: 10%;
-	margin-left: 30%;
+     display: flex;
+     justify-content: center;
 }
 .calendar-container {
-	width: 40%;
+	width: 20%;
 	text-align: center;
 }
 
