@@ -1,4 +1,4 @@
-let dayIteartor = new Date(2018, 8, 14);
+let dayIteartor = new Date(2019, 11, 10);
 
 function getDateAndAdvance() {
     let currentDay = dayIteartor;
