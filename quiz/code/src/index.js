@@ -31,7 +31,10 @@ const $isCorrectPassword = $password.map(x => {
 const $rounds = createStore([{question: "", answers: []}]);
 $rounds.on(guard({source: $password, filter: $isCorrectPassword}), (_, password) => JSON.parse(decryptWithAES(password, gameData)));
 
-const $currentTeamId = createStore(0)
+const $currentTeamId = createStore(0);
+const currentTeamIdChanged = createEvent('currentTeamIdChanged');
+$currentTeamId.on(currentTeamIdChanged, (x, _) => 1 - x);
+
 const $currentRoundId = createStore(0);
 
 const $hasNextRound = combine($currentRoundId, $rounds, (a, b) => a + 1 < b.length);
@@ -58,13 +61,18 @@ function teamStores(teamId) {
   const scoreEvent = sample($questionAnswers, teamAnswered, (answers, index) => {
     return index === -1 ? -1 : answers[index][1];
   });
+  const currentTeamIdUpdated = createEvent('currentTeamIdUpdated');
+  $currentTeamId.on(currentTeamIdUpdated, (a, b) => teamId);
+  
   $mistakes.on(scoreEvent, (x, update) => x + (update === -1 ? 1 : 0));
   $score.on(scoreEvent, (x, update) => x + (update === -1 ? 0 : update));
+  $mistakes.on(nextRoundTriggered, (a, b) => 0);
   return {
     isCurrent: $currentTeamId.map(x => x === teamId),
     name: $name,
     mistakes: $mistakes,
     score: $score,
+    currentTeamIdUpdated: currentTeamIdUpdated
   }
 }
 
@@ -85,7 +93,17 @@ $openedAnswers.reset(nextRoundTriggered);
 $openedAnswers.on(optionAnswered, (a, b) => [...new Set([...a, b])]);
 
 const $answerPreviews = combine($questionAnswers, $openedAnswers, (a, b) => {
-  return a.map((x, i) => b.includes(i) ? x[0] : `Вариант ${i + 1}`);
+  return a.map((x, i) => b.includes(i) ? 
+               (
+    						<button class="text big" onClick={e => e.preventDefault()}>
+    							<span>{x[0]}</span>
+      					</button>
+  							) : (
+    						<button class="text big" onClick={() => optionAnswered(i)}>
+    							<span class="hint">{x[1]} очков</span>
+      					</button>
+  							)
+              );
 });
 
 function TeamColumn({$team}) {
@@ -96,7 +114,7 @@ function TeamColumn({$team}) {
   return (
     <div>
       <div class="column">
-        <div class={(isCurrent ? 'active' : '') + ' big'}>Команда: {name}</div>
+        <div class={(isCurrent ? 'active' : '') + ' big team'} onClick={() => $team.currentTeamIdUpdated()}>Команда: {name}</div>
         {['', '', '']
           .map((_, i) => (i < mistakes ? 'X' : ''))
           .map(x => (
@@ -111,7 +129,7 @@ function TeamColumn({$team}) {
 }
 
 function App() {
-  const previews = useStore($answerPreviews)
+  const previews = useStore($answerPreviews);
   const question = useStore($question);
   const hasNextRound = useStore($hasNextRound);
   const password = useStore($password);
@@ -119,18 +137,14 @@ function App() {
   return (
     <div>
       <center>
-      	<input type="password" placeholder="Введите пароль" value={password} onChange={e => passwordChanged(e.target.value)}/>
+       <input type="password" placeholder="Введите пароль" value={password} onChange={e => passwordChanged(e.target.value)}/>
       </center>
       {isCorrectPassword && <div class="game">
         <h1>Вопрос: {question}</h1>
         <div class="wrapper">
           <TeamColumn $team={$teams[0]}/>
           <div class="column">
-            {previews.map((x, i) => (
-                <button class="text big" onClick={() => optionAnswered(i)}>
-                  {x}
-                </button>
-            ))}
+            {previews.map((x, i) => x)}
           </div>
           <TeamColumn $team={$teams[1]}/>
         </div>
@@ -140,7 +154,7 @@ function App() {
       </div>
       }
     </div>
-  )
+  );
 }
 
 /* Function to add style element */
@@ -216,18 +230,28 @@ addStyle(`
 			vertical-align: middle;
 			width: 500px;
 			text-align: center;
-			background-color: rgb(100, 202, 80);
+			background-color: lightgray;
 			border-radius: 5px;
+		}
+		.hint {
+			opacity: 0.2;
 		}
 		.next:disabled {
 			opacity: 0.5;
-			
 		}
 		.text:hover {
 			background-color: rgb(254, 232, 67);
 		}
+		.team {
+			padding: 10px;
+			border: 2px solid white;
+		}
+		.team:hover {
+			cursor: pointer;
+		}
 		.active {
-			text-decoration: underline;
+			border: 2px solid gray;
+			border-radius: 10px;
 		}
 		.big {
 			font-size: 20pt;
