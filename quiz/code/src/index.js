@@ -1,0 +1,236 @@
+import React from "react";
+import ReactDOM from "react-dom";
+import CryptoJS from 'crypto-js';
+import {combine, createEvent, createStore, guard, sample} from "effector";
+import {useStore} from 'effector-react'
+
+function encryptWithAES(password, text) {
+  return CryptoJS.AES.encrypt(text, password).toString();
+}
+
+function decryptWithAES(password, text) {
+  const bytes = CryptoJS.AES.decrypt(text, password);
+  return bytes.toString(CryptoJS.enc.Utf8);
+};
+
+const gameData = "U2FsdGVkX18iJc7sLS8UC6Fk1uv4pHSMOXbot0xyN3NaPPxrkP70+LAbXgDxkBMUQhrMZIr4eU38SJd+qGeAqNgETn2a6C++QYz3zZkJIrLH5+lv3u+tABlXnK3g6k6oGiSclMaiSssFzDOj4HU0fi/Klus7740wTW3xsYSXuULBkL7VAPmwNoY9FAwUNK7UBlVRNxv9xpAHNECiEPQGX8Lcsw0TBOWnUHfJZ53OxleGaxd/0SuOnGAJ8OnCYO8EpOQm1+EtF3z4w6QEpu/IcPo2PgObpZ18sVcJN6gqDb1sjZpzfiY3bMst3H4OLiMbxnGqMyF71nRXGBjOuXONz8pprpCjNsdwHRk6E06ouEdtvcGWq/kMPufeeWnHHdS9";
+
+const $password = createStore("");
+const passwordChanged = createEvent("passwordChanged");
+$password.on(passwordChanged, (_, x) => x);
+
+const $isCorrectPassword = $password.map(x => {
+  try {
+    const _ = JSON.parse(decryptWithAES(x, gameData));
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+const $rounds = createStore([{question: "", answers: []}]);
+$rounds.on(guard({source: $password, filter: $isCorrectPassword}), (_, password) => JSON.parse(decryptWithAES(password, gameData)));
+
+const $currentTeamId = createStore(0)
+const $currentRoundId = createStore(0);
+
+const $hasNextRound = combine($currentRoundId, $rounds, (a, b) => a + 1 < b.length);
+
+const nextRoundTriggered = createEvent('nextRoundTriggered');
+$currentRoundId.on(
+  guard({source: nextRoundTriggered, filter: $hasNextRound}),
+  (x, _) => x + 1
+);
+
+const $question = combine($currentRoundId, $rounds, (a, b) => b[a].question);
+const $questionAnswers = combine($currentRoundId, $rounds, (a, b) => b[a].answers);
+
+const optionAnswered = createEvent('optionAnswered')
+
+function teamStores(teamId) {
+  const $name = createStore(`${teamId + 1}`)
+  const $mistakes = createStore(0)
+  const $score = createStore(0)
+  const teamAnswered = guard({
+    source: optionAnswered,
+    filter: $currentTeamId.map(x => x === teamId),
+  })
+  const scoreEvent = sample($questionAnswers, teamAnswered, (answers, index) => {
+    return index === -1 ? -1 : answers[index][1];
+  });
+  $mistakes.on(scoreEvent, (x, update) => x + (update === -1 ? 1 : 0));
+  $score.on(scoreEvent, (x, update) => x + (update === -1 ? 0 : update));
+  return {
+    isCurrent: $currentTeamId.map(x => x === teamId),
+    name: $name,
+    mistakes: $mistakes,
+    score: $score,
+  }
+}
+
+const $teams = [teamStores(0), teamStores(1)]
+$currentTeamId.on(
+  sample(combine($teams[0].mistakes, $teams[1].mistakes), optionAnswered),
+  (prev, update) => {
+    const next = 1 - prev
+    if (update[next] === 3) {
+      return prev
+    }
+    return next
+  }
+)
+
+const $openedAnswers = createStore([]);
+$openedAnswers.reset(nextRoundTriggered);
+$openedAnswers.on(optionAnswered, (a, b) => [...new Set([...a, b])]);
+
+const $answerPreviews = combine($questionAnswers, $openedAnswers, (a, b) => {
+  return a.map((x, i) => b.includes(i) ? x[0] : `Вариант ${i + 1}`);
+});
+
+function TeamColumn({$team}) {
+  const isCurrent = useStore($team.isCurrent)
+  const name = useStore($team.name)
+  const mistakes = useStore($team.mistakes)
+  const score = useStore($team.score)
+  return (
+    <div>
+      <div class="column">
+        <div class={(isCurrent ? 'active' : '') + ' big'}>Команда: {name}</div>
+        {['', '', '']
+          .map((_, i) => (i < mistakes ? 'X' : ''))
+          .map(x => (
+            <button class="red" onClick={() => optionAnswered(-1)}>
+              {x}
+            </button>
+          ))}
+        <div class="big">Очки: {score}</div>
+      </div>
+    </div>
+  )
+}
+
+function App() {
+  const previews = useStore($answerPreviews)
+  const question = useStore($question);
+  const hasNextRound = useStore($hasNextRound);
+  const password = useStore($password);
+  const isCorrectPassword = useStore($isCorrectPassword);
+  return (
+    <div>
+      <center>
+      	<input type="password" placeholder="Введите пароль" value={password} onChange={e => passwordChanged(e.target.value)}/>
+      </center>
+      {isCorrectPassword && <div class="game">
+        <h1>Вопрос: {question}</h1>
+        <div class="wrapper">
+          <TeamColumn $team={$teams[0]}/>
+          <div class="column">
+            {previews.map((x, i) => (
+                <button class="text big" onClick={() => optionAnswered(i)}>
+                  {x}
+                </button>
+            ))}
+          </div>
+          <TeamColumn $team={$teams[1]}/>
+        </div>
+        <button disabled={!hasNextRound} class="next big"
+                onClick={() => nextRoundTriggered()}>Следующий раунд
+        </button>
+      </div>
+      }
+    </div>
+  )
+}
+
+/* Function to add style element */
+
+function addStyle(styles) {
+  /* Create style document */
+
+  var css = document.createElement('style')
+  css.type = 'text/css'
+
+  if (css.styleSheet) css.styleSheet.cssText = styles
+  else css.appendChild(document.createTextNode(styles))
+
+  /* Append style to the tag name */
+
+  document.getElementsByTagName('head')[0].appendChild(css)
+}
+
+addStyle(`
+		.game {
+			margin-top: 10%;
+			display: flex;
+			flex-flow: column;
+			align-items: center;
+			width: 100%;
+		}	
+		.wrapper {
+			display:flex;
+			flex-flow: row;
+			align-items: center;
+			justify-content: space-around;
+			width: 100%;
+		}
+		.red {
+			display: block;
+			border: 0px;
+			margin-bottom: 20px;
+			width: 50px;
+			height: 50px;
+			background-color: rgb(216, 71, 42);
+			border-radius: 5px;
+			color: white;
+			font-size: 20pt;
+		}
+		.column {
+			display: flex;
+			flex-flow: column;
+			align-items: center;
+		}
+		.column div {
+			margin-bottom: 20px;
+		}
+		.text {
+			border: 0px;
+			cursor: pointer;
+			margin-bottom: 10px;
+			display: block;
+			height: 60px;
+			line-height: 40px;
+			vertical-align: middle;
+			width: 500px;
+			text-align: center;
+			background-color: rgb(254, 202, 67);
+			border-radius: 5px;
+		}
+		.next {
+			border: 0px;
+			cursor: pointer;
+			margin-top: 50px;
+			display: block;
+			height: 60px;
+			line-height: 40px;
+			vertical-align: middle;
+			width: 500px;
+			text-align: center;
+			background-color: rgb(100, 202, 80);
+			border-radius: 5px;
+		}
+		.next:disabled {
+			opacity: 0.5;
+			
+		}
+		.text:hover {
+			background-color: rgb(254, 232, 67);
+		}
+		.active {
+			text-decoration: underline;
+		}
+		.big {
+			font-size: 20pt;
+		}
+`)
+ReactDOM.render(<App />, document.getElementById('root'))
