@@ -13,7 +13,7 @@ function decryptWithAES(password, text) {
   return bytes.toString(CryptoJS.enc.Utf8);
 };
 
-const gameData = "U2FsdGVkX1/49Kn+m09pkRlW8JJ+wwSbO69zy3TIDkaOgd0PX/OOtI81cmFKLMlFv6YpjYfs3pGUA1aBmyZIvjpPvKtMNuHAey7T/fMPmc53Yr7ypSqoC6VVhvZGvqTl/UVw+KJ1Rmv6GBGpme4ebVbH6nSL+rR7sB12PVPTnRlSlUqqgbAi8RPZ7hIDfcGjAurhSD8DwXVZKyVI/us+rzW3a9O3f3yTaZqrm0ihXoqEg3nT4408/lmihK3N1nUN3Y6PlWGTnuZyonOZxv465o1jAK1C0wEIDif/Olzgk/WjP/ja3TqiYH0OknG/PtWUKss4Wx6UoHWT4Pbax59GH+WOabAHpvk9VE+AWfPva9101V8L7sSCk6RPjO/D+tBDPJAl4+GfLYhVPvBlveOoDGaKoI95UeEzW8ul+3w3vX7ABoPvGDJsUNZWmISegJpMnd4/v6polCErDuyB7000uERsGVcBty5tLxoybvQ0KRGf1dOrVWWEIVaQUKwaQUIfixbz6+A5XDzo6qFx4Kqy8CyHVmS4xw3Mv8JjPPf7F6IjF1do1H9PwDEbypmJYBlv+h3cbtCE0VCPadxX4ra/idovaYyZM0u+SVmBE4jW1bLmWszuvDrgQ3NxwftsJWhBgQU2UG1FxC49/aQaMFqaEyEbX37tlfWhdkljQbSKLcLMQ7i1ECndBUCx2O8JycMWJgBx4AIC5YQeMY6eh5FjVZfEKhxK8Tvpt83UOKTCXBgd2iFYByPHRQx8+Lux5qurG8JS1IKcU/KUTZHqUFoTlm8L3YC2ck4pp2DwpZCPrMKV8F5Md9rfYNaT4WPFUyb9+f0qWxyg00H+5IpaEd+gxB0xeSGWjrJ5Cv1ywmrVnuymrUbF2+vcXiA9UMhB5UDbcZB2e+GtlBdYfjq6tSZUq9K9TB635FfpYLIlVKB0pr6l5ozMVxJ9KvaqIBo/JHII30lMcNiv4OoZF6T6umIebA==";
+const gameData = "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";
 
 const $password = createStore("");
 const passwordChanged = createEvent("passwordChanged");
@@ -30,6 +30,7 @@ const $isCorrectPassword = $password.map(x => {
 
 const $rounds = createStore([{question: "", answers: []}]);
 $rounds.on(guard({source: $password, filter: $isCorrectPassword}), (_, password) => JSON.parse(decryptWithAES(password, gameData)));
+$rounds.watch(x => console.info(x));
 
 const $currentTeamId = createStore(0);
 const currentTeamIdChanged = createEvent('currentTeamIdChanged');
@@ -62,7 +63,7 @@ function teamStores(teamId) {
     return index === -1 ? -1 : answers[index][1];
   });
   const currentTeamIdUpdated = createEvent('currentTeamIdUpdated');
-  $currentTeamId.on(currentTeamIdUpdated, (a, b) => teamId);
+  $currentTeamId.on(currentTeamIdUpdated, (a, _) => a === teamId ? -1 : teamId);
   
   $mistakes.on(scoreEvent, (x, update) => x + (update === -1 ? 1 : 0));
   $score.on(scoreEvent, (x, update) => x + (update === -1 ? 0 : update));
@@ -80,6 +81,9 @@ const $teams = [teamStores(0), teamStores(1)]
 $currentTeamId.on(
   sample(combine($teams[0].mistakes, $teams[1].mistakes), optionAnswered),
   (prev, update) => {
+    if (prev === -1) {
+        return -1;
+    }
     const next = 1 - prev
     if (update[next] === 3) {
       return prev
@@ -90,20 +94,24 @@ $currentTeamId.on(
 
 const $openedAnswers = createStore([]);
 $openedAnswers.reset(nextRoundTriggered);
-$openedAnswers.on(optionAnswered, (a, b) => [...new Set([...a, b])]);
+$openedAnswers.on(sample($currentTeamId, optionAnswered, (a, b) => [a, b]), (a, [team, update]) => [...a, [update, team]]);
 
 const $answerPreviews = combine($questionAnswers, $openedAnswers, (a, b) => {
-  return a.map((x, i) => b.includes(i) ? 
-               (
-    						<button class="text big" onClick={e => e.preventDefault()}>
-    							<span>{x[0]}</span>
-      					</button>
-  							) : (
-    						<button class="text big" onClick={() => optionAnswered(i)}>
-    							<span class="hint">{x[1]} очков</span>
-      					</button>
-  							)
-              );
+  return a.map((x, i) => {
+        const item = b.filter(y => y[0] == i);
+        if (item.length === 0) {
+            return (
+                <button class="text big" onClick={() => optionAnswered(i)}>
+                    <span class="hint">{x[1]} очков</span>
+                </button>
+            );
+        }
+        return (
+            <button class={`text big ${item[0][1] == 1 ? "first" : ""} ${item[0][1] == 0 ? "second" : ""}`} onClick={e => e.preventDefault()}>
+                <span>{x[0]}</span>
+            </button>
+        );
+  });
 });
 
 function TeamColumn({$team}) {
@@ -182,6 +190,7 @@ addStyle(`
 			width: 100%;
 		}	
 		.wrapper {
+            max-width: 1000px;
 			display:flex;
 			flex-flow: row;
 			align-items: center;
@@ -256,5 +265,11 @@ addStyle(`
 		.big {
 			font-size: 20pt;
 		}
+        .first {
+            border-left: 10px solid green;
+        }
+        .second {
+            border-right: 10px solid green;
+        }
 `)
 ReactDOM.render(<App />, document.getElementById('root'))
