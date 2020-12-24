@@ -183,14 +183,14 @@ function addStyle(styles) {
 
 addStyle(`
 		.game {
-			margin-top: 10%;
 			display: flex;
 			flex-flow: column;
 			align-items: center;
 			width: 100%;
+            margin: 10% auto;
+            max-width: 1000px;
 		}	
 		.wrapper {
-            max-width: 1000px;
 			display:flex;
 			flex-flow: row;
 			align-items: center;
