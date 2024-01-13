@@ -181,7 +181,7 @@ fn find(haystack: &[u8], needle: u8) -> Option<usize> {
 
 ### Benchmarks
 
-You can find full benchmark source code here: [./rust-find-bench](./rust-find-bench)
+You can find full benchmark source code here: [./rust-find-bench](https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench)
 
 | method                          |        time | speedup   |
 | :-----                          |        ---: |       --: |
