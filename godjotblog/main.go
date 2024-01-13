@@ -20,6 +20,7 @@ import (
 
 	"github.com/sivukhin/godjot/djot_parser"
 	"github.com/sivukhin/godjot/djot_tokenizer"
+	"github.com/sivukhin/godjot/html_writer"
 	"github.com/sivukhin/gopeg/highlight"
 )
 
@@ -30,6 +31,7 @@ type Meta struct {
 type Article struct {
 	Meta                             Meta
 	Link, Title, Content, Desc, Date string
+	Hide                             bool
 }
 
 type Articles struct {
@@ -38,20 +40,34 @@ type Articles struct {
 }
 
 var (
-	//go:embed templates/article.html
-	articleTemplateString string
+	//go:embed templates/about.html
+	aboutTemplateString string
 	//go:embed templates/index.html
 	indexTemplateString string
+	//go:embed templates/index_all.html
+	indexAllTemplateString string
+	//go:embed templates/article.html
+	articleTemplateString string
 )
 
 var (
-	indexTemplate   *template.Template
-	articleTemplate *template.Template
+	aboutTemplate    *template.Template
+	indexTemplate    *template.Template
+	indexAllTemplate *template.Template
+	articleTemplate  *template.Template
 )
 
 func init() {
 	var err error
+	aboutTemplate, err = template.New("").Parse(aboutTemplateString)
+	if err != nil {
+		panic(err)
+	}
 	indexTemplate, err = template.New("").Parse(indexTemplateString)
+	if err != nil {
+		panic(err)
+	}
+	indexAllTemplate, err = template.New("").Parse(indexAllTemplateString)
 	if err != nil {
 		panic(err)
 	}
@@ -84,10 +100,8 @@ func build(dir string, meta Meta) {
 					return
 				}
 				if dateAttr, ok := node.Attributes.TryGet("date"); ok && date == "" {
+					title = string(node.FullText())
 					date = dateAttr
-				}
-				if titleAttr, ok := node.Attributes.TryGet("title"); ok && title == "" {
-					title = titleAttr
 				}
 				if descAttr, ok := node.Attributes.TryGet("desc"); ok && desc == "" {
 					desc = descAttr
@@ -96,9 +110,6 @@ func build(dir string, meta Meta) {
 					hide = hideAttr
 				}
 			})
-		}
-		if hide == "true" {
-			return nil
 		}
 		htmlPath := strings.TrimSuffix(path, ".dj") + ".html"
 		f, err := os.OpenFile(htmlPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
@@ -148,36 +159,40 @@ func build(dir string, meta Meta) {
 						CloseTag("figure")
 				},
 			},
-		).ConvertDjotToHtml(ast...)
-		article := Article{Link: link, Meta: meta, Title: title, Desc: desc, Date: date, Content: content}
+		).ConvertDjotToHtml(&html_writer.HtmlWriter{Indentation: 4, TabSize: 2}, ast...)
+		article := Article{Link: link, Meta: meta, Title: title, Desc: desc, Date: date, Content: content, Hide: hide == "true"}
 		articles = append(articles, article)
 		return articleTemplate.Execute(f, article)
 	})
 	if err != nil {
 		panic(err)
 	}
-	indexFile, err := os.OpenFile(path.Join(dir, meta.Root), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
-	if err != nil {
-		panic(err)
-	}
-	defer indexFile.Close()
 	sort.Slice(articles, func(i, j int) bool { return articles[i].Date > articles[j].Date })
-	err = indexTemplate.Execute(indexFile, Articles{Meta: meta, Articles: articles})
-	if err != nil {
-		panic(err)
-	}
-	staticEntries, err := os.ReadDir("static")
-	if err != nil {
-		panic(err)
-	}
-	for _, static := range staticEntries {
-		sourcePath := path.Join("static", static.Name())
-		targetPath := path.Join(dir, "static", static.Name())
 
-		data, err := os.ReadFile(sourcePath)
+	renderFile := func(p string, tmpl *template.Template) {
+		f, err := os.OpenFile(p, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
 		if err != nil {
 			panic(err)
 		}
+		defer f.Close()
+		err = tmpl.Execute(f, Articles{Meta: meta, Articles: articles})
+		if err != nil {
+			panic(err)
+		}
+	}
+	renderFile(path.Join(dir, "index.html"), indexTemplate)
+	renderFile(path.Join(dir, "index_all.html"), indexAllTemplate)
+	renderFile(path.Join(dir, "about.html"), aboutTemplate)
+
+	_ = filepath.WalkDir("content", func(p string, d fs.DirEntry, err error) error {
+		if d == nil || d.IsDir() {
+			return nil
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			panic(err)
+		}
+		targetPath := path.Join(dir, strings.TrimPrefix(p, "content/"))
 		if _, err := os.Stat(path.Dir(targetPath)); os.IsNotExist(err) {
 			err = os.Mkdir(path.Dir(targetPath), 0700)
 			if err != nil {
@@ -196,7 +211,8 @@ func build(dir string, meta Meta) {
 			data = data[n:]
 		}
 		_ = f.Close()
-	}
+		return nil
+	})
 	log.Printf("build godjotblog: finish at dir '%v', elapsed=%v", dir, time.Since(startTime))
 }
 

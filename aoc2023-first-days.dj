@@ -1,4 +1,4 @@
-{title="Zero allocation hello world in Rust" date="2023/12/02" hide="true"}
+{date="2023/12/02" hide="true"}
 # Zero allocation hello world in Rust
 
 This year of [Advent of Code](https://adventofcode.com) I decided to try [*Rust*](https://www.rust-lang.org/). I'm complete newbie and still learning basic concepts of language (btw, [Brown Book](https://rust-book.cs.brown.edu) is amazing), but there were one idea that I wanted to try for the AoC challenges - I need to implement *zero allocation* solutions (at least for the first ones)!

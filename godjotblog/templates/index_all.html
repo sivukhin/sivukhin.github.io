@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
-    <meta name="author" content="Nikita Sivukhin"/>
+    <meta name="author" content="{{ .Meta.Author }}"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>naming is hard</title>
+    <title>{{ .Meta.BlogName }}</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="page">
     <div class="meta">
         <header>
-            <h2><a href="index.html">naming is hard</a></h2>
+            <h2><a href="{{ .Meta.Root }}">{{ .Meta.BlogName }}</a></h2>
         </header>
         <aside>
             <h2><a href="about.html">about</a></h2>
@@ -19,15 +19,9 @@
     </div>
     <div class="list">
         <ul>
-            
-            
-            
-            
-            
-            
-            
-            
-            
+            {{ range .Articles }}
+            <li><a href="{{ .Link }}">{{ .Date }}: {{ .Title }}</a></li>
+            {{ end }}
         </ul>
     </div>
 </div>

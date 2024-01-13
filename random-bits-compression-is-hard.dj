@@ -1,4 +1,4 @@
-{title="Random bits compression is hard" date="2023/11/12" hide="true"}
+{date="2023/11/12" hide="true"}
 # Random bits compression is hard
 
 How well can we compress random byte sequence where every bit have probability `p` of being set?

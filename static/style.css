@@ -3,6 +3,17 @@ body {
     justify-content: center;
 }
 
+.meta {
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    justify-content: space-between;
+}
+
+aside h2 {
+    font-weight: normal;
+}
+
 .page {
     display: flex;
     flex-direction: column;

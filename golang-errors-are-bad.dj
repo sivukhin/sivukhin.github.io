@@ -1,4 +1,4 @@
-{title="Death by a thousand error checks" date="2023/12/24"}
+{date="2023/12/24" hide="true"}
 # Death by a thousand error checks
 
 You probably already knew this but I deeply realize the problem with golang errors only recently. But let me tell a story first.
