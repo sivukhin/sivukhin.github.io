@@ -139,11 +139,13 @@ func build(dir string, meta Meta) {
 						code, err = highlight.Highlight(code, highlight.GoTokenizerRules)
 					} else if state.Node.Attributes.Get(djot_tokenizer.CodeLangKey) == "asm" {
 						code, err = highlight.Highlight(code, highlight.AsmTokenizerRules)
+					} else if state.Node.Attributes.Get(djot_tokenizer.CodeLangKey) == "zig" {
+						code, err = highlight.Highlight(code, highlight.ZigTokenizerRules)
 					}
 					if err != nil {
 						panic(fmt.Errorf("unable to highlight code: %w", err))
 					}
-					state.Writer.InTag("pre")(func() {
+					state.Writer.InTag("pre", state.Node.Attributes.Entries()...)(func() {
 						for _, line := range strings.Split(strings.TrimSpace(code), "\n") {
 							state.Writer.OpenTag("code").WriteString(line).CloseTag("code").WriteString("\n")
 						}

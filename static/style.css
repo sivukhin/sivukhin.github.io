@@ -1,6 +1,7 @@
 body {
     display: flex;
     justify-content: center;
+    font-family: sans-serif;
 }
 
 .meta {
@@ -15,9 +16,6 @@ aside h2 {
 }
 
 .page {
-    display: flex;
-    flex-direction: column;
-    justify-content: left;
     width: min(100%, 1000px);
 }
 
@@ -91,7 +89,7 @@ pre code {
     counter-increment: listing;
 }
 
-pre code::before {
+pre:not(.noline) code::before {
     content: counter(listing) ". ";
     display: inline-block;
     width: 2em;
@@ -129,4 +127,20 @@ li.unchecked::before {
     content: "☐";
     margin-left: -1.5em;
     float: left;
+}
+
+table {
+    border-spacing: 0;
+    border-collapse: collapse;
+}
+
+tr > * {
+    border: 1px solid black;
+    padding: 5px;
+    margin: 0;
+}
+
+.footer {
+    display: flex;
+    flex-direction: row-reverse;
 }
