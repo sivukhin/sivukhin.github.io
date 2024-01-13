@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="author" content="Nikita Sivukhin"/>
+    <title>Caching is hard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+    <div class="article">
+        <section id="Caching-is-hard">
+<h1 title="Caching is hard" date="2023/11/01" hide="true">Caching is hard</h1>
+<blockquote>
+<p>There are only two hard things in computer science: cache invalidation and naming things</p>
+<p><strong>Phil Karlton</strong></p>
+</blockquote>
+<p>Caching is ubiquitous in software development. Merely any complex system have a caching layer for better performance:</p>
+</section>
+<ul>
+<li>
+CPUs have hierarchy of caches for faster memory accesses and reduction of main memory operations
+</li>
+<li>
+Operation systems have filesystem cache aimed to reduce amount of reads from storage and batch / deduplicate write operations
+</li>
+<li>
+Many databases have one or more dedicated caches for speeding up different stages of query processing
+</li>
+<li>
+Applications usually have caching layer speeding up frequent requests
+</li>
+<li>
+<p>The list can go on and on&hellip;</p>
+</li>
+</ul>
+<p>Not suprisingly, caching is well studied problem where you can find tons of materials (papers, lectures, blog posts, etc) about any possible aspect of the problem (cache eviction policies, CPU cache associativity, distributed caching approaches, etc).</p>
+
+    </div>
+    <div class="meta">
+        <header>
+            <h2><a href="/">naming is hard</a></h2>
+        </header>
+    </div>
+</div>
+</body>
+</html>

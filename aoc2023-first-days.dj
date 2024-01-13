@@ -1,0 +1,86 @@
+{title="Zero allocation hello world in Rust" date="2023/12/02" hide="true"}
+# Zero allocation hello world in Rust
+
+This year of [Advent of Code](https://adventofcode.com) I decided to try [*Rust*](https://www.rust-lang.org/). I'm complete newbie and still learning basic concepts of language (btw, [Brown Book](https://rust-book.cs.brown.edu) is amazing), but there were one idea that I wanted to try for the AoC challenges - I need to implement *zero allocation* solutions (at least for the first ones)!
+
+What does it mean, *zero allocation*? Rust Book has nice [chapter about ownership](https://rust-book.cs.brown.edu/ch04-01-what-is-ownership.html) which describes such concepts like memory, _stack_ and _heap_. In short, your program usually operating with memory from two regions:
+
+...something about zero allocations...
+
+How can we analyze allocations of our program? I found nice tool [allocscope](https://github.com/matt-kimball/allocscope) which record all allocations made with `malloc` in your program and allow you to analyze source of that allocations. Also, you can compile simple C code in shared library in order to override default `malloc` and add some debug information to it:
+
+``` c
+#define _GNU_SOURCE 1
+#include "stdlib.h"
+#include "stdio.h"
+#include "dlfcn.h"
+void* malloc(size_t s) {
+	void* (*orig_malloc)(size_t) = dlsym(RTLD_NEXT, "malloc");
+	fprintf(stderr, "malloc: %ld\n", s);
+	return orig_malloc(s);
+}
+```
+
+Let's look at all `malloc` allocations in simple hello world program:
+
+``` rust
+fn main() { println!("Hello, world!"); }
+```
+
+``` shell
+$> rustc main.rs
+$> LD_PRELOAD=./libm.so ./main
+malloc: 472
+malloc: 120
+malloc: 1024
+malloc: 5
+malloc: 48
+malloc: 1024
+Hello, world!
+```
+
+Wow, we are allocating 2693 bytes for simple hello world program! This is a bit unexpected - where all these allocations come from?
+
+Couple of them looks pretty suspicious: 1024 bytes allocations is almost surely used for some intermediate buffers. We are printing string to the console - so most likely that Rust implementation of writes to `stdout` uses buffering for performance.
+
+If we will unwind all macros we should get some code equivalent to the `write_all` call on `stdout()` stream: `io::stdout().write_all(b"Hello, World!")`.
+
+We can look up for the code of `io` module and indeed see, that [`stdout()`](https://doc.rust-lang.org/src/std/io/stdio.rs.html#614) creates synchronized instance wrapped with [`LineWriter`](https://doc.rust-lang.org/src/std/io/buffered/linewriter.rs.html#87) which has default buffer size of 1KiB.
+
+```rust
+#[must_use]
+#[stable(feature = "rust1", since = "1.0.0")]
+pub fn stdout() -> Stdout {
+    Stdout {
+        inner: STDOUT
+            .get_or_init(|| ReentrantMutex::new(RefCell::new(LineWriter::new(stdout_raw())))),
+    }
+}
+
+impl<W: Write> LineWriter<W> {
+    #[stable(feature = "rust1", since = "1.0.0")]
+    pub fn new(inner: W) -> LineWriter<W> {
+        // Lines typically aren't that long, don't use a giant buffer
+        LineWriter::with_capacity(1024, inner)
+    }
+}
+```
+
+Ok, let's get rid of the `stdout` then and use `stderr` which also creates synchronized instance but without any additional buffering. We can write to `stderr` explicitly or use `eprintln!` macro for the same purpose. Let's see how much memory we allocate in this case in our new program:
+
+``` rust
+fn main() { eprintln!("Hello, world!"); }
+```
+
+``` shell
+$> rustc main.rs
+$> LD_PRELOAD=./libm.so ./main
+malloc: 472
+malloc: 120
+malloc: 1024
+malloc: 5
+malloc: 48
+Hello, World!
+```
+
+Yes, nice! We reduced allocated memory to the 1669 bytes - which is exactly 1024 bytes less than our previous version.

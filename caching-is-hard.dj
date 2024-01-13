@@ -1,0 +1,18 @@
+{title="Caching is hard" date="2023/11/01" hide="true"}
+# Caching is hard
+
+> There are only two hard things in computer science: cache invalidation and naming things
+>
+> *Phil Karlton*
+
+
+Caching is ubiquitous in software development. Merely any complex system have a caching layer for better performance:
+
+- CPUs have hierarchy of caches for faster memory accesses and reduction of main memory operations
+- Operation systems have filesystem cache aimed to reduce amount of reads from storage and batch / deduplicate write operations
+- Many databases have one or more dedicated caches for speeding up different stages of query processing
+- Applications usually have caching layer speeding up frequent requests
+- The list can go on and on...
+
+Not surprisingly, caching is well studied problem where you can find tons of materials (papers, lectures, blog posts, etc) about any possible aspect of the problem (cache eviction policies, CPU cache associativity, distributed caching approaches, etc).
+

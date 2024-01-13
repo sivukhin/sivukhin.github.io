@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="author" content="{{ .Meta.Author }}"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="page">
+    <div class="meta">
+        <header>
+            <h2><a href="/">{{ .Meta.BlogName }}</a></h2>
+        </header>
+    </div>
+    <div class="article">
+        {{ .Content }}
+    </div>
+</div>
+</body>
+</html>
