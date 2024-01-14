@@ -9,7 +9,7 @@ fn find_chunks(haystack: &[u8], needle: u8) -> Option<usize> {
     haystack
         .chunks(32)
         .enumerate()
-        .find_map(|(i, chunk)| { find_naive(haystack, needle).map(|x| 32 * i + x) })
+        .find_map(|(i, chunk)| { find_naive(chunk, needle).map(|x| 32 * i + x) })
 }
 
 fn find_chunks_exact(haystack: &[u8], needle: u8) -> Option<usize> {
@@ -17,7 +17,7 @@ fn find_chunks_exact(haystack: &[u8], needle: u8) -> Option<usize> {
     let remainder = chunks.remainder();
 
     chunks.enumerate()
-        .find_map(|(i, chunk)| { find_naive(haystack, needle).map(|x| 32 * i + x) })
+        .find_map(|(i, chunk)| { find_naive(chunk, needle).map(|x| 32 * i + x) })
         .or(find_naive(remainder, needle))
 }
 
@@ -32,9 +32,10 @@ pub fn find_branchless(haystack: &[u8], needle: u8) -> Option<usize> {
 pub fn find_chunks_exact_branchless(haystack: &[u8], needle: u8) -> Option<usize> {
     let chunks = haystack.chunks_exact(32);
     let remainder = chunks.remainder();
-    chunks.enumerate()
-        .find_map(|(i, chunk)| find_branchless(chunk, needle).map(|x| 32 * i + x) )
-        .or(find_branchless(remainder, needle))
+    chunks
+        .enumerate()
+        .find_map(|(i, chunk)| find_branchless(chunk, needle).map(|x| 32 * i + x))
+        .or(find_branchless(remainder, needle).map(|x| (haystack.len() & !0x1f) + x))
 }
 
 fn find_naive_bench(c: &mut Criterion) {

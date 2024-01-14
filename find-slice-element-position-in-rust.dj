@@ -160,7 +160,7 @@ Luckily, `Rust` developer team thought about this and added method [`chunks_exac
 
 This final step allow us to make our dream come true: [vectorized `find` function][final vectorized] with only safe `Rust`!
 
-[final vectorized]: https://godbolt.org/z/n3b7dbWoW
+[final vectorized]: https://godbolt.org/z/Kja5WGjMf
 
 ```rust
 // bonus: refactoring of find_branchless function to make it more elegant!
@@ -175,7 +175,7 @@ fn find(haystack: &[u8], needle: u8) -> Option<usize> {
     let remainder = chunks.remainder();
     chunks.enumerate()
         .find_map(|(i, chunk)| find_branchless(chunk, needle).map(|x| 32 * i + x) )
-        .or(find_branchless(remainder, needle))
+        .or(find_branchless(remainder, needle).map(|x| (haystack.len() & !0x1f) + x))
 }
 ```
 
@@ -185,7 +185,7 @@ The full benchmark source code is available here: [./rust-find-bench](https://gi
 
 | method                          |        time | speedup   |
 | :-----                          |        ---: |       --: |
-| `find_naive`                    | `491.32 ns` | `x1.0`    |
-| `find_chunks`                   | `500.90 ns` | `x0.9`    |
-| `find_chunks_exact`             | `374.95 ns` | `x1.3`    |
-| `find_chunks_exact_branchless`  |  `49.60 ns` | *`x10.0`* |
+| `find_naive`                    | `366.06 ns` | `x1.0`    |
+| `find_chunks`                   | `414.06 ns` | `x0.9`    |
+| `find_chunks_exact`             | `133.53 ns` | `x2.7`    |
+| `find_chunks_exact_branchless`  |  `40.48 ns` | *`x9.0`* |

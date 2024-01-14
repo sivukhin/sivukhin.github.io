@@ -142,7 +142,7 @@
 <code>    <span class="keyword">let</span> <span class="identifier">remainder</span> = <span class="identifier">chunks</span>.<span class="function">remainder</span>();</code>
 <code>    <span class="identifier">chunks</span>.<span class="function">enumerate</span>()</code>
 <code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32 </span>* <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
-<code>        .<span class="function">or</span>(<span class="function">find_branchless</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>))</code>
+<code>        .<span class="function">or</span>(<span class="function">find_branchless</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="identifier">haystack</span>.<span class="function">len</span>() & !<span class="number">0x1</span><span class="identifier">f</span> + <span class="identifier">x</span>))</code>
 <code>}</code>
 </pre>
     </section>
@@ -157,23 +157,23 @@
         </tr>
         <tr>
           <td style="text-align: left;"><code>find_naive</code></td>
-          <td style="text-align: right;"><code>491.32 ns</code></td>
+          <td style="text-align: right;"><code>366.06 ns</code></td>
           <td style="text-align: right;"><code>x1.0</code></td>
         </tr>
         <tr>
           <td style="text-align: left;"><code>find_chunks</code></td>
-          <td style="text-align: right;"><code>500.90 ns</code></td>
+          <td style="text-align: right;"><code>414.06 ns</code></td>
           <td style="text-align: right;"><code>x0.9</code></td>
         </tr>
         <tr>
           <td style="text-align: left;"><code>find_chunks_exact</code></td>
-          <td style="text-align: right;"><code>374.95 ns</code></td>
-          <td style="text-align: right;"><code>x1.3</code></td>
+          <td style="text-align: right;"><code>133.53 ns</code></td>
+          <td style="text-align: right;"><code>x2.7</code></td>
         </tr>
         <tr>
           <td style="text-align: left;"><code>find_chunks_exact_branchless</code></td>
-          <td style="text-align: right;"><code>49.60 ns</code></td>
-          <td style="text-align: right;"><strong><code>x10.0</code></strong></td>
+          <td style="text-align: right;"><code>40.48 ns</code></td>
+          <td style="text-align: right;"><strong><code>x9.0</code></strong></td>
         </tr>
       </table>
     </section>
