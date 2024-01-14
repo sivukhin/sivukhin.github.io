@@ -17,18 +17,18 @@
     <div class="article">
     <section id="Find-slice-element-position-in-Rust">
       <h1 date="2024/01/13">Find slice element position in Rust</h1>
-      <p>I started to learn <code>Rust</code> only recently and while exploring <a href="https://doc.rust-lang.org/std/primitive.slice.html">slice methods</a> I was a bit surprised that I didn&rsquo;t find any method for finding position of element in the slice:</p>
+      <p>I started to learn <code>Rust</code> only recently and while exploring <a href="https://doc.rust-lang.org/std/primitive.slice.html">slice methods</a> I was a bit surprised that I didn&rsquo;t find any method for finding the position of element in the slice:</p>
       <pre class="noline"><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
 </pre>
-      <p>I had some experience with <code>Zig</code> and it has pretty cool <a href="https://ziglang.org/documentation/master/std/#A;std:mem"><code>std.mem</code></a> module with many generic functions including <code>indexOf</code>, which internally implements <a href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm">Boyer-Moore-Horspool</a> pattern matching algorithm against generic element type <code>T</code>:</p>
+      <p>I had some experience with <code>Zig</code> which has a very useful <a href="https://ziglang.org/documentation/master/std/#A;std:mem"><code>std.mem</code></a> module with many generic functions including <code>indexOf</code>, which internally implements <a href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm">Boyer-Moore-Horspool</a> pattern matching algorithm against generic element type <code>T</code>:</p>
       <pre class="noline"><code><span class="keyword">fn</span> <span class="function">indexOf</span>(<span class="keyword">comptime</span> <span class="identifier">T</span>: <span class="identifier">type</span>, <span class="identifier">haystack</span>: []<span class="keyword">const</span> <span class="identifier">T</span>, <span class="identifier">needle</span>: []<span class="keyword">const</span> <span class="identifier">T</span>) ?<span class="identifier">usize</span> { ... }</code>
 </pre>
-      <p>After discussion with <code>Rust</code> experts I quickly got the response that I can just use methods of <code>Iterator</code> traits:</p>
+      <p>After discussing with <code>Rust</code> experts I quickly got the response that I can just use methods of <code>Iterator</code> traits:</p>
       <pre><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">position</span>(|&<span class="identifier">x</span>| <span class="identifier">x</span> == <span class="identifier">needle</span>)</code>
 <code>}</code>
 </pre>
-      <p>Nice! But what about performance of this method? At first, I was afraid that using lambda function with closure will lead to poor performance (coming from <code>Go</code> with non-<code>LLVM</code> based compiler which has pretty limited power of inlining optimization). But, non-surprisingly for most of the developers, <code>LLVM</code> (and <code>Rust</code>) can optimize this method very nicely and <code>rustc</code> produce <a href="https://godbolt.org/z/YrvjKfx1v">very clean</a> binary with <code>-C opt-level=3 -C target-cpu=native</code> release profile flags:</p>
+      <p>Nice! But what about performance of this method? At first, I was afraid that using lambda function with closure will lead to poor performance (coming from <code>Go</code> with non-<code>LLVM</code> based compiler which has pretty limited power of inlining optimization). But, unsurprisingly for most of the developers, <code>LLVM</code> (and <code>Rust</code>) can optimize this method very nicely and <code>rustc</code> produce <a href="https://godbolt.org/z/YrvjKfx1v">very clean</a> binary with <code>-C opt-level=3 -C target-cpu=native</code> release profile flags:</p>
       <pre><code><span class="comment"># input : rdi=haystack.ptr, rsi=haystack.size, rdx=needle</span></code>
 <code><span class="comment"># output: rax=None/Some, rdx=Some(v)</span></code>
 <code>example::find:</code>
@@ -53,7 +53,7 @@
 <code>        <span class="keyword">mov</span>     eax, <span class="number">1</span></code>
 <code>        <span class="keyword">ret</span></code>
 </pre>
-      <p>Can we improve the performance of method?</p>
+      <p>Can we improve the method&rsquo;s performance?</p>
     </section>
     <section id="Implementing-find-without-early-returns">
       <h3>Implementing <code>find</code> without early returns</h3>
@@ -69,7 +69,7 @@
 <code>    <span class="identifier">position</span></code>
 <code>}</code>
 </pre>
-      <p>Unfortunately, this doesn&rsquo;t help &ndash; there is still to <code>SIMD</code> instructions in the output assembler. But wait, we can notice drastic changes in the <a href="https://godbolt.org/z/5Eh5rfaW3">output binary</a> &ndash; now it seems like compiler unrolled our main loop and compare bytes in chunks of size 8:</p>
+      <p>Unfortunately, this doesn&rsquo;t help &ndash; there are still to <code>SIMD</code> instructions in the output assembler. But wait, we can notice drastic changes in the <a href="https://godbolt.org/z/5Eh5rfaW3">output binary</a> &ndash; now it seems like compiler unrolled our main loop and compare bytes in chunks of size 8:</p>
       <pre><code><span class="comment"># there is just a part of the assembler, you can find full output by the godbolt link</span></code>
 <code>.LBB0_11:</code>
 <code>        <span class="keyword">cmp</span>     byte ptr [r8 + r11 - <span class="number">1</span>], dl</code>
@@ -127,12 +127,12 @@
 <code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32 </span>* <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
 <code>}</code>
 </pre>
-      <p>Unfortunately, this doesn&rsquo;t work &ndash; compiler again produces boring assembly with only unrolling optimization on. But, if we stop and think about it, this is actually expected! Chunking logic make every chunk unpredictable in size &ndash; because there is no guarantees about exact size of the last chunk (and every chunk can be the last one!).</p>
+      <p>Unfortunately, this doesn&rsquo;t work &ndash; the compiler again produces boring assembly with only unrolling optimization on. But, if we stop and think about it, this is actually expected! Chunking logic make every chunk unpredictable in size &ndash; because there is no guarantees about exact size of the last chunk (and every chunk can be the last one!).</p>
       <p>Luckily, <code>Rust</code> developer team thought about this and added method <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks_exact"><code>chunks_exact</code></a> specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: <code>remainder</code>.</p>
       <p>This final step allow us to make our dream come true: <a href="https://godbolt.org/z/n3b7dbWoW">vectorized <code>find</code> function</a> with only safe <code>Rust</code>!</p>
       <pre><code><span class="comment">// bonus: refactoring of find_branchless function to make it more elegant!</span></code>
 <code><span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
-<code>    <span class="keyword">return</span> <span class="identifier">chunk</span>.<span class="function">iter</span>().<span class="function">enumerate</span>()</code>
+<code>    <span class="keyword">return</span> <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">enumerate</span>()</code>
 <code>        .<span class="function">filter</span>(|(_, &<span class="identifier">b</span>)| <span class="identifier">b</span> == <span class="identifier">needle</span>)</code>
 <code>        .<span class="function">rfold</span>(<span class="identifier">None</span>, |_, (<span class="identifier">i</span>, _)| <span class="function">Some</span>(<span class="identifier">i</span>))</code>
 <code>}</code>
@@ -148,7 +148,7 @@
     </section>
     <section id="Benchmarks">
       <h3>Benchmarks</h3>
-      <p>You can find full benchmark source code here: <a href="https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench">./rust-find-bench</a></p>
+      <p>The full benchmark source code is available here: <a href="https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench">./rust-find-bench</a></p>
       <table>
         <tr>
           <th style="text-align: left;">method</th>

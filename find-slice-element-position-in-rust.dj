@@ -1,7 +1,7 @@
 {date="2024/01/13"}
 # Find slice element position in Rust
 
-I started to learn `Rust` only recently and while exploring [slice methods][] I was a bit surprised that I didn't find any method for finding position of element in the slice:
+I started to learn `Rust` only recently and while exploring [slice methods][] I was a bit surprised that I didn't find any method for finding the position of element in the slice:
 
 {.noline}
 ``` rust
@@ -9,7 +9,7 @@ fn find(haystack: &[u8], needle: u8) -> Option<usize> { ... }
 ```
 
 
-I had some experience with `Zig` and it has pretty cool [`std.mem`][zig stdmem] module with many generic functions including `indexOf`, which internally implements [Boyer-Moore-Horspool][] pattern matching algorithm against generic element type `T`:
+I had some experience with `Zig` which has a very useful [`std.mem`][zig stdmem] module with many generic functions including `indexOf`, which internally implements [Boyer-Moore-Horspool][] pattern matching algorithm against generic element type `T`:
 
 {.noline}
 ``` zig
@@ -20,7 +20,7 @@ fn indexOf(comptime T: type, haystack: []const T, needle: []const T) ?usize { ..
 [zig stdmem]: https://ziglang.org/documentation/master/std/#A;std:mem
 [Boyer-Moore-Horspool]: https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm
 
-After discussion with `Rust` experts I quickly got the response that I can just use methods of `Iterator` traits:
+After discussing with `Rust` experts I quickly got the response that I can just use methods of `Iterator` traits:
 
 ```rust
 fn find(haystack: &[u8], needle: u8) -> Option<usize> {
@@ -28,7 +28,7 @@ fn find(haystack: &[u8], needle: u8) -> Option<usize> {
 }
 ```
 
-Nice! But what about performance of this method? At first, I was afraid that using lambda function with closure will lead to poor performance (coming from `Go` with non-`LLVM` based compiler which has pretty limited power of inlining optimization). But, non-surprisingly for most of the developers, `LLVM` (and `Rust`) can optimize this method very nicely and `rustc` produce [very clean][rustc iter] binary with `-C opt-level=3 -C target-cpu=native` release profile flags:
+Nice! But what about performance of this method? At first, I was afraid that using lambda function with closure will lead to poor performance (coming from `Go` with non-`LLVM` based compiler which has pretty limited power of inlining optimization). But, unsurprisingly for most of the developers, `LLVM` (and `Rust`) can optimize this method very nicely and `rustc` produce [very clean][rustc iter] binary with `-C opt-level=3 -C target-cpu=native` release profile flags:
 
 [rustc iter]: https://godbolt.org/z/YrvjKfx1v
 
@@ -58,7 +58,7 @@ example::find:
         ret
 ```
 
-Can we improve the performance of method?
+Can we improve the method's performance?
 
 ### Implementing `find` without early returns
 
@@ -78,7 +78,7 @@ pub fn find_branchless(haystack: &[u8], needle: u8) -> Option<usize> {
 }
 ```
 
-Unfortunately, this doesn't help -- there is still to `SIMD` instructions in the output assembler. But wait, we can notice drastic changes in the [output binary][rustc rev] -- now it seems like compiler unrolled our main loop and compare bytes in chunks of size 8:
+Unfortunately, this doesn't help -- there are still to `SIMD` instructions in the output assembler. But wait, we can notice drastic changes in the [output binary][rustc rev] -- now it seems like compiler unrolled our main loop and compare bytes in chunks of size 8:
 
 [rustc rev]: https://godbolt.org/z/5Eh5rfaW3
 
@@ -152,7 +152,7 @@ pub fn find(haystack: &[u8], needle: u8) -> Option<usize> {
 }
 ```
 
-Unfortunately, this doesn't work -- compiler again produces boring assembly with only unrolling optimization on. But, if we stop and think about it, this is actually expected! Chunking logic make every chunk unpredictable in size -- because there is no guarantees about exact size of the last chunk (and every chunk can be the last one!).
+Unfortunately, this doesn't work -- the compiler again produces boring assembly with only unrolling optimization on. But, if we stop and think about it, this is actually expected! Chunking logic make every chunk unpredictable in size -- because there is no guarantees about exact size of the last chunk (and every chunk can be the last one!).
 
 Luckily, `Rust` developer team thought about this and added method [`chunks_exact`][chunks_exact] specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: `remainder`.
 
@@ -165,7 +165,7 @@ This final step allow us to make our dream come true: [vectorized `find` functio
 ```rust
 // bonus: refactoring of find_branchless function to make it more elegant!
 fn find_branchless(haystack: &[u8], needle: u8) -> Option<usize> {
-    return chunk.iter().enumerate()
+    return haystack.iter().enumerate()
         .filter(|(_, &b)| b == needle)
         .rfold(None, |_, (i, _)| Some(i))
 }
@@ -181,7 +181,7 @@ fn find(haystack: &[u8], needle: u8) -> Option<usize> {
 
 ### Benchmarks
 
-You can find full benchmark source code here: [./rust-find-bench](https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench)
+The full benchmark source code is available here: [./rust-find-bench](https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench)
 
 | method                          |        time | speedup   |
 | :-----                          |        ---: |       --: |
