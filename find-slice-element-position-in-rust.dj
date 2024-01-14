@@ -1,5 +1,5 @@
 {date="2024/01/13"}
-# Find slice element position in Rust
+# Find slice element position in Rust, fast!
 
 I started to learn `Rust` only recently and while exploring [slice methods][] I was a bit surprised that I didn't find any method for finding the position of element in the slice:
 

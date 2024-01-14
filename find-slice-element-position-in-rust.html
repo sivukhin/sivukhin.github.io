@@ -4,7 +4,7 @@
     <meta charset="utf-8"/>
     <meta name="author" content="Nikita Sivukhin"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find slice element position in Rust</title>
+    <title>Find slice element position in Rust, fast!</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -15,8 +15,8 @@
         </header>
     </div>
     <div class="article">
-    <section id="Find-slice-element-position-in-Rust">
-      <h1 date="2024/01/13">Find slice element position in Rust</h1>
+    <section id="Find-slice-element-position-in-Rust-fast">
+      <h1 date="2024/01/13">Find slice element position in Rust, fast!</h1>
       <p>I started to learn <code>Rust</code> only recently and while exploring <a href="https://doc.rust-lang.org/std/primitive.slice.html">slice methods</a> I was a bit surprised that I didn&rsquo;t find any method for finding the position of element in the slice:</p>
       <pre class="noline"><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
 </pre>
