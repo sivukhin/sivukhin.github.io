@@ -129,7 +129,7 @@
 </pre>
       <p>Unfortunately, this doesn&rsquo;t work &ndash; the compiler again produces boring assembly with only unrolling optimization on. But, if we stop and think about it, this is actually expected! Chunking logic make every chunk unpredictable in size &ndash; because there is no guarantees about exact size of the last chunk (and every chunk can be the last one!).</p>
       <p>Luckily, <code>Rust</code> developer team thought about this and added method <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks_exact"><code>chunks_exact</code></a> specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: <code>remainder</code>.</p>
-      <p>This final step allow us to make our dream come true: <a href="https://godbolt.org/z/n3b7dbWoW">vectorized <code>find</code> function</a> with only safe <code>Rust</code>!</p>
+      <p>This final step allow us to make our dream come true: <a href="https://godbolt.org/z/Kja5WGjMf">vectorized <code>find</code> function</a> with only safe <code>Rust</code>!</p>
       <pre><code><span class="comment">// bonus: refactoring of find_branchless function to make it more elegant!</span></code>
 <code><span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="keyword">return</span> <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">enumerate</span>()</code>
@@ -142,7 +142,7 @@
 <code>    <span class="keyword">let</span> <span class="identifier">remainder</span> = <span class="identifier">chunks</span>.<span class="function">remainder</span>();</code>
 <code>    <span class="identifier">chunks</span>.<span class="function">enumerate</span>()</code>
 <code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32 </span>* <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
-<code>        .<span class="function">or</span>(<span class="function">find_branchless</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="identifier">haystack</span>.<span class="function">len</span>() & !<span class="number">0x1</span><span class="identifier">f</span> + <span class="identifier">x</span>))</code>
+<code>        .<span class="function">or</span>(<span class="function">find_branchless</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| (<span class="identifier">haystack</span>.<span class="function">len</span>() & !<span class="number">0x1</span><span class="identifier">f</span>) + <span class="identifier">x</span>))</code>
 <code>}</code>
 </pre>
     </section>
