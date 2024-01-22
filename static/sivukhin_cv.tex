@@ -36,8 +36,8 @@
  total={170mm,257mm},
  left=30mm,
  right=10mm,
- top=8mm,
- bottom=5mm,
+ top=4mm,
+ bottom=4mm,
 }
 
 \begin{document}
@@ -49,52 +49,56 @@
 \par{\Large{\textbf{Tech Lead}}}
 
 \begin{tabular}{p{\colwidth}p{50mm} >{\hspace{-6pt}}p{\colwidth}l}
-    \textbf{Languages} & Russian (native), English & \textbf{E-mail} & \href{mailto:sivukhin.nikita@yandex.ru}{\texttt{sivukhin.nikita@yandex.ru}} \\
-    \textbf{Phone}     & +37433155926 & \textbf{CodeForces} & \MYhref[red]{http://codeforces.com/profile/sivukhin}{\texttt{sivukhin}}\\
-    \textbf{Location}   & Yerevan, Armenia &     \textbf{GitHub} & \href{https://github.com/sivukhin}{\texttt{sivukhin}}\\
-    \textbf{Telegram}   & \href{https://t.me/sivukhin_nikita}{\texttt{@sivukhin\_nikita}} &     \textbf{LinkedIn} & \href{https://www.linkedin.com/in/nikita-sivukhin/}{\texttt{nikita-sivukhin}}
+    \textbf{Languages} & Russian (native), English & \textbf{E-mail} & \href{mailto:sivukhin.work@gmail.com}{\texttt{sivukhin.work@gmail.com}} \\
+    \textbf{Phone}     & +37433155926 & \textbf{Telegram}   & \href{https://t.me/sivukhin_nikita}{\texttt{@sivukhin\_nikita}}\\
+    \textbf{Location}   & Yerevan, Armenia & \textbf{LinkedIn} & \href{https://www.linkedin.com/in/nikita-sivukhin/}{\texttt{nikita-sivukhin}}\\
+    & & \textbf{GitHub} & \href{https://github.com/sivukhin}{\texttt{sivukhin}}\\
+    % \textbf{CodeForces} & \MYhref[red]{http://codeforces.com/profile/sivukhin}{\texttt{sivukhin}}\\
+    % \textbf{GitHub} & \href{https://github.com/sivukhin}{\texttt{sivukhin}}\\
 \end{tabular}
 
+\vspace{-4mm}
 \section{Work experience}
 \vspace{1mm}
 \begin{tabular}{r p{14cm}}
 	\texttt{now{ }} & \textbf{ShareChat/Moj, core recommendation system}\\
 	\texttt{2022 dec{ }} & \href{https://sharechat.com/}{sharechat.com}\\
-	& \small{- Tech lead at the Recall team}\\
 	& \small{- Development of cost-efficient ANN-index with 100k RPS throughput and p99 latency below 50ms}\\
 	& \small{- Development of cost-efficient model serving layer based on \texttt{tensorflow-serving}}\\
 	& \small{- Migration of distributed FM training pipeline written in Go from \texttt{BigTable} to \texttt{Scylla}}\\
 	& \small{- Ownership of the recall inference layer in large recommendation system}\\
 
-	\texttt{2022 dec{ }} & \textbf{Kontur.Focus, business partner analysis project}\\
+	\texttt{2022 dec{ }} & \textbf{Kontur.Focus, business-partner analysis product}\\
 	\texttt{2021 may{ }} & \href{https://kontur-inc.com/focus}{kontur-inc.com/focus}\\
-	& \small{- Development of the subsystem for companies connection analysis. Core microservice~--- company graph index with edge pattern matching capabilities}\\
-	& \small{- Implemented several streaming pipelines for data processing from different unreliable sources}\\
+	& \small{- Development of a high-performance and memory-efficient subsystem for connection analysis. The core component is the company graph index written in \texttt{C\#} with pattern matching search support}\\
+	& \small{- Implemented an in-house stream processor for easy and declarative definition of pipelines. The engine was written in \texttt{C\#} and supported multi-core processing, state checkpoint and \texttt{LINQ}-style DSL}\\
+	& \small{- Implemented queue on top of the key-value DB for the durable processing of unreliable data source}\\
 
     \texttt{2021 may{ }} & \textbf{Kontur.EDI, electronic document interchange provider} \\
     \texttt{2017 sept} & \small{- Development and maintanence of the service for electronic document interchange with focus on reliability, flexibility and speed of message delivery}\\
-    & \small{- Performed migration from legacy even-sourcing subsystem which involved multi-terabyte data migration and business logic refinements}\\
-    & \small{- Implemented subsystem for automatization of new parties connection process}\\
-    & \small{- Several components I contributed in were open-sourced: \href{https://github.com/skbkontur/GroboContainer.NUnitExtensions}{GroboContainer.NUnitExtensions}, \href{https://github.com/skbkontur/GrobExp.Compiler}{GrobExp.Compiler}, \href{https://github.com/skbkontur/cassandra-distributed-task-queue}{cassandra-distributed-task-queue}}\\
+    & \small{- Migrated legacy even-sourcing subsystem which involved live multi-terabyte intelligent data migration and business logic refinements}\\
+    & \small{- Implemented both back-end and front-end components for a subsystem that automates the process of connecting new clients}\\
+    & \small{- Some components I contributed in were open-sourced: \href{https://github.com/skbkontur/GrobExp.Compiler}{GrobExp.Compiler}, \href{https://github.com/skbkontur/cassandra-distributed-task-queue}{distributed-task-queue}}\\
 \end{tabular}
 
 \section{Education \& Achievements}
 \vspace{1mm}
 \begin{tabular}{r p{14cm}}
-	\texttt{2022} & \textbf{Create pleasant visualization for \href{https://proctf.cyberweek.ae/}{HITB Pro CTF 2022} contest}\\
-	& \small{- Working with WebGL to create beauty visualization of CTF contest progress}\\
-	& \small{- Source code available on \href{https://github.com/sivukhin/cell-visualization}{GitHub}}\\
+	\texttt{2022} & \textbf{Visualized \href{https://proctf.cyberweek.ae/}{HITB Pro CTF 2022} contest (\href{https://github.com/sivukhin/cell-visualization}{GitHub})}\\
+	& \small{- Implemented visualization with plain \texttt{three.js}}\\
+	& \small{- Implemented shader for Voronoi-diagram visualization (interior of a cell)}\\
 
-	\texttt{2020} & \textbf{Work with organizers of \href{https://icfpcontest2020.github.io}{ICFPC2020} online contest}\\
-	& \small{- Integration with AWS cloud to provide additional resources for horizontal scaling of bots battles calculation process}\\
+	\texttt{2020} & \textbf{Worked on \href{https://icfpcontest2020.github.io}{ICFPC2020} online contest infrastructure}\\
+	& \small{- Integrated the contest system with AWS cloud to provide additional resources for the horizontal scaling of bot battles}\\
 
     \texttt{2018 - 2020} & \textbf{Master's degree of Mathematics and Computer science} \\
     & \small\textit{Ural Federal University, Russia}\\
-    & \small{- Master's thesis: Construction of Sparse Suffix Trees and LCE Indexes in Optimal Time and Space (\href{https://arxiv.org/abs/2105.03782}{arXiv pre-print})} \\
+    & \small{- Thesis: Construction of Sparse Suffix Trees and LCE Indexes in Optimal Time and Space (\href{https://arxiv.org/abs/2105.03782}{arXiv})} \\
 
     \texttt{2014 - 2018} & \textbf{Bachelor's degree of Mathematics and Computer science} \\
     & \small\textit{Ural Federal University, Russia}\\
-    & \small{- Bachelor's thesis: Compressed multiple pattern matching (\href{https://arxiv.org/abs/1811.01248}{arXiv pre-print})} \\
+    & \small{- Joint program with \href{https://dataschool.yandex.com/}{Yandex School of Data Analysis}} (ML developer track) \\
+    & \small{- Thesis: Compressed multiple pattern matching (\href{https://arxiv.org/abs/1811.01248}{arXiv})} \\
 
     \texttt{2016, 2018} & \textbf{ACM ICPC World Final, Silver and Bronze medal}\\
     & \small{- 8th place, Ural Federal University team, final scoreboard: \href{https://icpc.global/community/results-2016}{icpc.global}}\\
@@ -108,23 +112,21 @@
 
 \section{Skills}
 \begin{itemize}
-\vspace{1mm}
-\item[-] Solid knowledge of \texttt{Go} language
-\vspace{-1mm}
-\subitem{$\bullet$} See open source projects: \href{https://github.com/sivukhin/govanish}{govanish}, \href{https://github.com/sivukhin/gok8sproxy}{gok8sproxy}, \href{https://github.com/sivukhin/godjot}{godjot}
+\vspace{2mm}
+\item[-] Solid knowledge of \texttt{Go} language (see open source projects: \href{https://github.com/sivukhin/govanish}{govanish}, \href{https://github.com/sivukhin/gok8sproxy}{gok8sproxy}, \href{https://github.com/sivukhin/godjot}{godjot})
 \item[-] Solid experience with \texttt{Cassandra}/\texttt{Scylla}, \texttt{Kafka}/\texttt{RedPanda}, \texttt{Elasticsearch}, \texttt{Redis}
-\vspace{-1mm}
-\subitem{$\bullet$} E.g., identified correctness bug in \texttt{Cassandra} thrift protocol after production incident: \href{https://issues.apache.org/jira/browse/CASSANDRA-14812?page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel&focusedCommentId=16848873#comment-16848873}{\texttt{CASSANDRA-14812}}
+\subitem{- Identified correctness bug in \texttt{Cassandra} thrift protocol after production incident: \href{https://issues.apache.org/jira/browse/CASSANDRA-14812?page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel&focusedCommentId=16848873#comment-16848873}{\texttt{CASSANDRA-14812}}}
 \item[-] Confident use of \texttt{Kubernetes} and \texttt{Helm}
 \vspace{-1mm}
-\subitem{$\bullet$} Optimized costs for \texttt{k8s@1.24} in \texttt{GKE} with \texttt{HPA} tuning and \texttt{topology-aware} routing
+\subitem{- Optimized costs for \texttt{k8s@1.24} in \texttt{GKE} with \texttt{HPA} tuning and \texttt{topology-aware} routing}
 \item[-] Passioned about algorithms and data structures, especially compression and compressed data structures
-\vspace{-1mm}
-\subitem{$\bullet$} Actively participated in competitive programming contests
-\vspace{-1mm}
-\subitem{$\bullet$} Conducted scientific research focused on succinct data structures and compression algorithms
 \item[-] Four years of experience and very strong understanding of \texttt{C\#} language and \texttt{.NET} ecosystem
-\item[-] Solid understanding of production \texttt{RecSys} components, especially recall layer
+\item[-] Knowledge of ML concepts: tabular data, NLP, RecSys (from Yandex.Dataschool courses and ShareChat)
+\item[-] Free use of many tools for daily routines: \texttt{Python}/\texttt{Jupyter} notebooks, \texttt{Unix} tools, \texttt{docker} / \texttt{docker-compose}
+\item[-] One year of experience as a full-stack engineer working with \texttt{Typescript}, \texttt{React} and \texttt{webpack}
+\item[-] Solid knowledge of \texttt{C++} from university courses, scientific work and competitive programming contests
+\vspace{-1mm}
+\subitem{- See implementation of succinct Aho-Corasick algorithm: \href{https://bitbucket.org/umqra/multiple-pattern-matching/src/master/}{Bitbucket}}
 \end{itemize}
 
 \end{document}
