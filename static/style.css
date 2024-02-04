@@ -64,13 +64,13 @@ code > .command {
 }
 
 pre {
-    border-left: 1px solid rgb(128, 128, 128);
-    padding-left: 4px;
     white-space: pre-wrap;
+    padding-left: 2em;
+    overflow-x: scroll;
 }
 
 pre {
-    white-space: pre-wrap;
+    white-space: pre;
 }
 
 pre::before {
@@ -79,6 +79,8 @@ pre::before {
 
 pre code {
     counter-increment: listing;
+    border-left: 1px solid rgb(128, 128, 128);
+    padding-left: 4px;
 }
 
 pre:not(.noline) code::before {
@@ -87,6 +89,7 @@ pre:not(.noline) code::before {
     text-align: right;
     color: rgb(128, 128, 128);
     width: 2em;
+    position: relative;
     margin-right: 1em;
     margin-left: -3em;
 }
