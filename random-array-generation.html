@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="author" content="Nikita Sivukhin"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate random bit string with k ones, succinct!</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="page">
+    <div class="meta">
+        <header>
+            <h2><a href="/">naming is hard</a></h2>
+        </header>
+    </div>
+    <div class="article">
+    <section id="Generate-random-bit-string-with-k-ones-succinct">
+      <a class="heading-anchor" href="#Generate-random-bit-string-with-k-ones-succinct"><h1 date="2024/01/28" hide="true">Generate random bit string with k ones, succinct!</h1>
+      </a><p>While solving <a href="https://adventofcode.com/2023/day/12">12th day challenge</a> of recent Advent of Code I ran into following subtask required for the full solution (don&rsquo;t ask me why, but I tried to solve first AoC challenges with <code>O(1)</code> additional memory):</p>
+      <blockquote>
+        <p>You need to <strong>uniformly</strong> generate random array A = [a<sub>0</sub>, a<sub>1</sub>, &hellip;, a<sub>k-1</sub>], 0 ≤ a<sub>i</sub> < <strong>L</strong> such that a<sub>i+1</sub> - a<sub>i</sub> - 1 ≥ <strong>D<sub>i</sub></strong> ≥ 0 and <strong>L</strong> - a<sub>k-1</sub> - 1 ≥ <strong>D<sub>k-1</sub></strong></p>
+        <p><em>(must be at least <strong>D<sub>i</sub></strong> empty space between adjacent positions + must be at least <strong>D<sub>k-1</sub></strong> space for last position)</em></p>
+        <p>For example, for <strong>L = 7</strong>, <strong>k = 3</strong> and <strong>D = [1, 2, 0]</strong> there are 4 valid arrays configurations:</p>
+        <ol>
+          <li>
+            <strong>A = [0, 2, 5]</strong>, <strong>1011010</strong>
+          </li>
+          <li>
+            <strong>A = [0, 2, 6]</strong>, <strong>1011001</strong>
+          </li>
+          <li>
+            <strong>A = [0, 3, 6]</strong>, <strong>1001101</strong>
+          </li>
+          <li>
+            <strong>A = [1, 3, 6]</strong>, <strong>0101101</strong>
+          </li>
+        </ol>
+        <p><em>(on the right &mdash; field configuration from AoC task where blocks of given length should be placed in line)</em></p>
+      </blockquote>
+      <p>It&rsquo;s not hard to see that this problem is equivalent to the problem of choosing <strong>k</strong> elements from the <strong>N = L - ∑D<sub>i</sub></strong> options. In our example we need to choose <strong>k = 3</strong> elements from <strong>N = 4</strong> options so we have <strong>C(4, 3) = 4</strong> assignments in total.</p>
+      <blockquote>
+        <ol>
+          <li>
+            <strong>1110</strong> &ndash; <strong>1</strong>0<strong>1</strong>10<strong>1</strong><strong>0</strong>
+          </li>
+          <li>
+            <strong>1101</strong> &ndash; <strong>1</strong>0<strong>1</strong>10<strong>0</strong><strong>1</strong>
+          </li>
+          <li>
+            <strong>1011</strong> &ndash; <strong>1</strong>0<strong>0</strong><strong>1</strong>10<strong>1</strong>
+          </li>
+          <li>
+            <strong>0111</strong> &ndash; <strong>0</strong><strong>1</strong>0<strong>1</strong>10<strong>1</strong>
+          </li>
+        </ol>
+      </blockquote>
+      <p>So, how can we uniformly generate random bit string of length <strong>N</strong> with exactly <strong>k</strong> ones fast using only constant amount of memory?</p>
+    </section>
+    <section id="Simple-solution">
+      <a class="heading-anchor" href="#Simple-solution"><h2>Simple solution</h2>
+      </a><p>The simplest option is to just take valid array and apply any permutation algorithm to it.   </p>
+      <p>The hardest condition here is the uniformity restriction without which we can easily implement very fast generation function with some degree of randomness:</p>
+      <pre class="language-rust"><code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="identifier">generate_non_uniform</span><'<span class="identifier">a</span>>(<span class="identifier">rng</span>: &'<span class="identifier">a</span> <span class="keyword">mut</span> <span class="identifier">SmallRng</span>, <span class="identifier">l</span>: <span class="identifier">i32</span>, <span class="identifier">d</span>: &'<span class="identifier">a</span> [<span class="identifier">i32</span>]) -> <span class="keyword">impl</span> <span class="identifier">Iterator</span><<span class="identifier">Item</span>=<span class="identifier">i32</span>> + '<span class="identifier">a</span> {</code>
+<code>    <span class="keyword">let</span> <span class="keyword">mut</span> <span class="identifier">reserved</span> = <span class="identifier">d</span>.<span class="function">iter</span>().<span class="identifier">sum</span>::<<span class="identifier">i32</span>>();</code>
+<code>    <span class="keyword">return</span> <span class="identifier">std</span>::<span class="identifier">iter</span>::<span class="function">once</span>(<span class="number">0</span>).<span class="function">chain</span>(<span class="identifier">d</span>.<span class="function">iter</span>().<span class="function">copied</span>()).<span class="function">scan</span>(<span class="number">0</span>, <span class="keyword">move</span> |<span class="identifier">pos</span>, <span class="identifier">d</span>| {</code>
+<code>        <span class="keyword">let</span> <span class="identifier">delta</span> = <span class="identifier">rng</span>.<span class="function">gen_range</span>(<span class="number">0.</span>.<span class="identifier">l</span> - <span class="identifier">reserved</span>);</code>
+<code>        <span class="identifier">reserved</span> += <span class="identifier">delta</span>;</code>
+<code>        *<span class="identifier">pos</span> += <span class="identifier">d</span> + <span class="identifier">delta</span>;</code>
+<code>        <span class="function">Some</span>(*<span class="identifier">pos</span>)</code>
+<code>    });</code>
+<code>}</code>
+<code><span class="comment">/*</code>
+<code></span><span class="comment">    $> make run-non-uniform</code>
+<code></span><span class="comment">    112 non-uniform: [0, 2, 6]</code>
+<code></span><span class="comment">    117 non-uniform: [0, 2, 5]</code>
+<code></span><span class="comment">    250 non-uniform: [0, 3, 6]</code>
+<code></span><span class="comment">    521 non-uniform: [1, 3, 6]</code>
+<code></span><span class="comment">*/</span></code>
+</pre>
+    </section>
+    <section id="Slow-solution">
+      <a class="heading-anchor" href="#Slow-solution"><h2>Slow solution</h2>
+      </a></section>
+    <section id="Faster-solution">
+      <a class="heading-anchor" href="#Faster-solution"><h2>Faster solution</h2>
+      </a></section>
+    <section id="Fast-solution">
+      <a class="heading-anchor" href="#Fast-solution"><h2>Fast solution</h2>
+      </a></section>
+</div>
+    <hr/>
+    <div class="footer">
+        <p><a href="https://github.com/sivukhin/sivukhin.github.io">github link</a> (made with <a href="https://github.com/sivukhin/godjot">godjot</a> and <a href="https://github.com/sivukhin/gopeg">gopeg</a>)</p>
+    </div>
+</div>
+</body>
+</html>

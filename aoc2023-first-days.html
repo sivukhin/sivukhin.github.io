@@ -16,12 +16,12 @@
     </div>
     <div class="article">
     <section id="Zero-allocation-hello-world-in-Rust">
-      <h1 date="2023/12/02" hide="true">Zero allocation hello world in Rust</h1>
-      <p>This year of <a href="https://adventofcode.com">Advent of Code</a> I decided to try <a href="https://www.rust-lang.org/"><strong>Rust</strong></a>. I&rsquo;m complete newbie and still learning basic concepts of language (btw, <a href="https://rust-book.cs.brown.edu">Brown Book</a> is amazing), but there were one idea that I wanted to try for the AoC challenges - I need to implement <strong>zero allocation</strong> solutions (at least for the first ones)!</p>
+      <a class="heading-anchor" href="#Zero-allocation-hello-world-in-Rust"><h1 date="2023/12/02" hide="true">Zero allocation hello world in Rust</h1>
+      </a><p>This year of <a href="https://adventofcode.com">Advent of Code</a> I decided to try <a href="https://www.rust-lang.org/"><strong>Rust</strong></a>. I&rsquo;m complete newbie and still learning basic concepts of language (btw, <a href="https://rust-book.cs.brown.edu">Brown Book</a> is amazing), but there were one idea that I wanted to try for the AoC challenges - I need to implement <strong>zero allocation</strong> solutions (at least for the first ones)!</p>
       <p>What does it mean, <strong>zero allocation</strong>? Rust Book has nice <a href="https://rust-book.cs.brown.edu/ch04-01-what-is-ownership.html">chapter about ownership</a> which describes such concepts like memory, <em>stack</em> and <em>heap</em>. In short, your program usually operating with memory from two regions:</p>
       <p>&hellip;something about zero allocations&hellip;</p>
       <p>How can we analyze allocations of our program? I found nice tool <a href="https://github.com/matt-kimball/allocscope">allocscope</a> which record all allocations made with <code>malloc</code> in your program and allow you to analyze source of that allocations. Also, you can compile simple C code in shared library in order to override default <code>malloc</code> and add some debug information to it:</p>
-      <pre><code><span class="macro">#define</span> _<span class="identifier">GNU_SOURCE</span> <span class="number">1</span></code>
+      <pre class="language-c"><code><span class="macro">#define</span> _<span class="identifier">GNU_SOURCE</span> <span class="number">1</span></code>
 <code><span class="macro">#include</span> <span class="string">"stdlib.h"</span></code>
 <code><span class="macro">#include</span> <span class="string">"stdio.h"</span></code>
 <code><span class="macro">#include</span> <span class="string">"dlfcn.h"</span></code>
@@ -32,9 +32,9 @@
 <code>}</code>
 </pre>
       <p>Let&rsquo;s look at all <code>malloc</code> allocations in simple hello world program:</p>
-      <pre><code><span class="keyword">fn</span> <span class="function">main</span>() { <span class="identifier">println</span>!(<span class="string">"Hello, world!"</span>); }</code>
+      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">main</span>() { <span class="identifier">println</span>!(<span class="string">"Hello, world!"</span>); }</code>
 </pre>
-      <pre><code><span class="command">$> rustc main.rs</span></code>
+      <pre class="language-shell"><code><span class="command">$> rustc main.rs</span></code>
 <code><span class="command">$> LD_PRELOAD=./libm.so ./main</span></code>
 <code>malloc: 472</code>
 <code>malloc: 120</code>
@@ -48,7 +48,7 @@
       <p>Couple of them looks pretty suspicious: 1024 bytes allocations is almost surely used for some intermediate buffers. We are printing string to the console - so most likely that Rust implementation of writes to <code>stdout</code> uses buffering for performance.</p>
       <p>If we will unwind all macros we should get some code equivalent to the <code>write_all</code> call on <code>stdout()</code> stream: <code>io::stdout().write_all(b"Hello, World!")</code>.</p>
       <p>We can look up for the code of <code>io</code> module and indeed see, that <a href="https://doc.rust-lang.org/src/std/io/stdio.rs.html#614"><code>stdout()</code></a> creates synchronized instance wrapped with <a href="https://doc.rust-lang.org/src/std/io/buffered/linewriter.rs.html#87"><code>LineWriter</code></a> which has default buffer size of 1KiB.</p>
-      <pre><code>#[<span class="identifier">must_use</span>]</code>
+      <pre class="language-rust"><code>#[<span class="identifier">must_use</span>]</code>
 <code>#[<span class="function">stable</span>(<span class="identifier">feature</span> = <span class="string">"rust1"</span>, <span class="identifier">since</span> = <span class="string">"1.0.0"</span>)]</code>
 <code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">stdout</span>() -> <span class="identifier">Stdout</span> {</code>
 <code>    <span class="identifier">Stdout</span> {</code>
@@ -61,14 +61,14 @@
 <code>    #[<span class="function">stable</span>(<span class="identifier">feature</span> = <span class="string">"rust1"</span>, <span class="identifier">since</span> = <span class="string">"1.0.0"</span>)]</code>
 <code>    <span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">new</span>(<span class="identifier">inner</span>: <span class="identifier">W</span>) -> <span class="identifier">LineWriter</span><<span class="identifier">W</span>> {</code>
 <code>        <span class="comment">// Lines typically aren't that long, don't use a giant buffer</span></code>
-<code>        <span class="identifier">LineWriter</span>::<span class="function">with_capacity</span>(<span class="number">1024,</span> <span class="identifier">inner</span>)</code>
+<code>        <span class="identifier">LineWriter</span>::<span class="function">with_capacity</span>(<span class="number">1024</span>, <span class="identifier">inner</span>)</code>
 <code>    }</code>
 <code>}</code>
 </pre>
       <p>Ok, let&rsquo;s get rid of the <code>stdout</code> then and use <code>stderr</code> which also creates synchronized instance but without any additional buffering. We can write to <code>stderr</code> explicitly or use <code>eprintln!</code> macro for the same purpose. Let&rsquo;s see how much memory we allocate in this case in our new program:</p>
-      <pre><code><span class="keyword">fn</span> <span class="function">main</span>() { <span class="identifier">eprintln</span>!(<span class="string">"Hello, world!"</span>); }</code>
+      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">main</span>() { <span class="identifier">eprintln</span>!(<span class="string">"Hello, world!"</span>); }</code>
 </pre>
-      <pre><code><span class="command">$> rustc main.rs</span></code>
+      <pre class="language-shell"><code><span class="command">$> rustc main.rs</span></code>
 <code><span class="command">$> LD_PRELOAD=./libm.so ./main</span></code>
 <code>malloc: 472</code>
 <code>malloc: 120</code>

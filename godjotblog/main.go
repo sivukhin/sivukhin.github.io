@@ -21,6 +21,7 @@ import (
 	"github.com/sivukhin/godjot/djot_parser"
 	"github.com/sivukhin/godjot/djot_tokenizer"
 	"github.com/sivukhin/godjot/html_writer"
+	"github.com/sivukhin/godjot/tokenizer"
 	"github.com/sivukhin/gopeg/highlight"
 )
 
@@ -121,10 +122,27 @@ func build(dir string, meta Meta) {
 		if err != nil {
 			return err
 		}
+		registry := djot_parser.DefaultConversionRegistry
 		content := djot_parser.NewConversionContext(
 			"html",
-			djot_parser.DefaultConversionRegistry,
+			registry,
 			map[djot_parser.DjotNode]djot_parser.Conversion{
+				djot_parser.HeadingNode: func(state djot_parser.ConversionState, next func(djot_parser.Children)) {
+					href := tokenizer.AttributeEntry{
+						Key:   "href",
+						Value: "#" + djot_parser.CreateSectionId(string(state.Node.FullText())),
+					}
+					class := tokenizer.AttributeEntry{
+						Key:   "class",
+						Value: "heading-anchor",
+					}
+					state.Writer.InTag("a", href, class)(func() {
+						level := len(state.Node.Attributes.Get(djot_parser.HeadingLevelKey))
+						state.Writer.InTag(fmt.Sprintf("h%v", level), state.Node.Attributes.Entries()...)(func() {
+							next(nil)
+						}).WriteString("\n")
+					})
+				},
 				djot_parser.CodeNode: func(state djot_parser.ConversionState, next func(c djot_parser.Children)) {
 					code := string(state.Node.FullText())
 					if state.Node.Attributes.Get(djot_tokenizer.CodeLangKey) == "python" {
@@ -141,6 +159,8 @@ func build(dir string, meta Meta) {
 						code, err = highlight.Highlight(code, highlight.AsmTokenizerRules)
 					} else if state.Node.Attributes.Get(djot_tokenizer.CodeLangKey) == "zig" {
 						code, err = highlight.Highlight(code, highlight.ZigTokenizerRules)
+					} else if state.Node.Attributes.Get(djot_tokenizer.CodeLangKey) == "ckit" {
+						code, err = highlight.Highlight(code, highlight.CKitTokenizerRules)
 					}
 					if err != nil {
 						panic(fmt.Errorf("unable to highlight code: %w", err))
@@ -230,7 +250,7 @@ func inotify(id int, dir string) {
 		return err
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("inotify failed for dir %v: %v", dir, err)
 	}
 }
 
@@ -247,7 +267,7 @@ func watch(dir string, meta Meta) {
 
 	id, err := syscall.InotifyInit()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("watch failed for dir %v: %v", dir, err)
 	}
 	defer func() { _ = syscall.Close(id) }()
 	var chunk [1024]byte
@@ -258,7 +278,7 @@ func watch(dir string, meta Meta) {
 		for {
 			n, err := syscall.Read(id, chunk[:])
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalf("read failed for id %v: %v", id, err)
 			}
 			buf = append(buf, chunk[:n]...)
 			if n < len(chunk) {
@@ -271,7 +291,7 @@ func watch(dir string, meta Meta) {
 			var event syscall.InotifyEvent
 			err = binary.Read(bytes.NewReader(buf[i:i+4*4]), binary.LittleEndian, &event)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalf("inotify parsing failed: %v", err)
 			}
 			name := cstring(buf[i+4*4:])
 			i += 4*4 + int(event.Len)
@@ -288,9 +308,9 @@ func watch(dir string, meta Meta) {
 func serve(dir string, meta Meta) {
 	go func() {
 		http.Handle("/", http.FileServer(http.Dir(dir)))
-		err := http.ListenAndServe(":8080", nil)
+		err := http.ListenAndServe(":8000", nil)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("serve failed for dir %v: %v", dir, err)
 		}
 	}()
 	watch(dir, meta)

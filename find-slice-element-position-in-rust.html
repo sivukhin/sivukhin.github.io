@@ -16,20 +16,20 @@
     </div>
     <div class="article">
     <section id="Find-slice-element-position-in-Rust-fast">
-      <h1 date="2024/01/13">Find slice element position in Rust, fast!</h1>
-      <p>I started to learn <code>Rust</code> only recently and while exploring <a href="https://doc.rust-lang.org/std/primitive.slice.html">slice methods</a> I was a bit surprised that I didn&rsquo;t find any method for finding the position of element in the slice:</p>
-      <pre class="noline"><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
+      <a class="heading-anchor" href="#Find-slice-element-position-in-Rust-fast"><h1 date="2024/01/13">Find slice element position in Rust, fast!</h1>
+      </a><p>I started to learn <code>Rust</code> only recently and while exploring <a href="https://doc.rust-lang.org/std/primitive.slice.html">slice methods</a> I was a bit surprised that I didn&rsquo;t find any method for finding the position of element in the slice:</p>
+      <pre class="noline language-rust"><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
 </pre>
       <p>I had some experience with <code>Zig</code> which has a very useful <a href="https://ziglang.org/documentation/master/std/#A;std:mem"><code>std.mem</code></a> module with many generic functions including <code>indexOf</code>, which internally implements <a href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm">Boyer-Moore-Horspool</a> pattern matching algorithm against generic element type <code>T</code>:</p>
-      <pre class="noline"><code><span class="keyword">fn</span> <span class="function">indexOf</span>(<span class="keyword">comptime</span> <span class="identifier">T</span>: <span class="identifier">type</span>, <span class="identifier">haystack</span>: []<span class="keyword">const</span> <span class="identifier">T</span>, <span class="identifier">needle</span>: []<span class="keyword">const</span> <span class="identifier">T</span>) ?<span class="identifier">usize</span> { ... }</code>
+      <pre class="noline language-zig"><code><span class="keyword">fn</span> <span class="function">indexOf</span>(<span class="keyword">comptime</span> <span class="identifier">T</span>: <span class="identifier">type</span>, <span class="identifier">haystack</span>: []<span class="keyword">const</span> <span class="identifier">T</span>, <span class="identifier">needle</span>: []<span class="keyword">const</span> <span class="identifier">T</span>) ?<span class="identifier">usize</span> { ... }</code>
 </pre>
       <p>After discussing with <code>Rust</code> experts I quickly got the response that I can just use methods of <code>Iterator</code> traits:</p>
-      <pre><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
+      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">position</span>(|&<span class="identifier">x</span>| <span class="identifier">x</span> == <span class="identifier">needle</span>)</code>
 <code>}</code>
 </pre>
       <p>Nice! But what about performance of this method? At first, I was afraid that using lambda function with closure will lead to poor performance (coming from <code>Go</code> with non-<code>LLVM</code> based compiler which has pretty limited power of inlining optimization). But, unsurprisingly for most of the developers, <code>LLVM</code> (and <code>Rust</code>) can optimize this method very nicely and <code>rustc</code> produce <a href="https://godbolt.org/z/YrvjKfx1v">very clean</a> binary with <code>-C opt-level=3 -C target-cpu=native</code> release profile flags:</p>
-      <pre><code><span class="comment"># input : rdi=haystack.ptr, rsi=haystack.size, rdx=needle</span></code>
+      <pre class="language-asm"><code><span class="comment"># input : rdi=haystack.ptr, rsi=haystack.size, rdx=needle</span></code>
 <code><span class="comment"># output: rax=None/Some, rdx=Some(v)</span></code>
 <code>example::find:</code>
 <code>        <span class="keyword">test</span>    rsi, rsi <span class="comment"># if haystack.len() == 0</span></code>
@@ -56,10 +56,10 @@
       <p>Can we improve the method&rsquo;s performance?</p>
     </section>
     <section id="Implementing-find-without-early-returns">
-      <h3>Implementing <code>find</code> without early returns</h3>
-      <p>We can notice that for other iterator methods like <code>filter</code> compiler will use <code>SSE / AVX</code> instructions (if target CPU supports them). Then, what is preventing compiler from using <code>SIMD</code> instructions for <code>position</code> method? Internally within a team we came to the conclusion that <code>position</code> method implementation returns early which makes it harder for <code>LLVM</code> to apply <code>SIMD</code> (although I have no proofs for that).</p>
+      <a class="heading-anchor" href="#Implementing-find-without-early-returns"><h3>Implementing <code>find</code> without early returns</h3>
+      </a><p>We can notice that for other iterator methods like <code>filter</code> compiler will use <code>SSE / AVX</code> instructions (if target CPU supports them). Then, what is preventing compiler from using <code>SIMD</code> instructions for <code>position</code> method? Internally within a team we came to the conclusion that <code>position</code> method implementation returns early which makes it harder for <code>LLVM</code> to apply <code>SIMD</code> (although I have no proofs for that).</p>
       <p>We can assume that compiler will be able to vectorize function if it will have predictable amount of operations (static or with simple relation of input properties like slice length). How can we achieve that for the <code>position</code> function? Actually, there is a nice way to implement it without <code>break</code> in the middle of the loop: we just need to process slice in reverse order! Then, in this case, we can just reassign result variable if we found matching element:</p>
-      <pre><code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
+      <pre class="language-rust"><code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="keyword">let</span> <span class="keyword">mut</span> <span class="identifier">position</span> = <span class="identifier">None</span>::<<span class="identifier">usize</span>>;</code>
 <code>    <span class="keyword">for</span> (<span class="identifier">i</span>, &<span class="identifier">b</span>) <span class="keyword">in</span> <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">enumerate</span>().<span class="function">rev</span>() {</code>
 <code>        <span class="keyword">if</span> <span class="identifier">b</span> == <span class="identifier">needle</span> {</code>
@@ -70,7 +70,7 @@
 <code>}</code>
 </pre>
       <p>Unfortunately, this doesn&rsquo;t help &ndash; there are still to <code>SIMD</code> instructions in the output assembler. But wait, we can notice drastic changes in the <a href="https://godbolt.org/z/5Eh5rfaW3">output binary</a> &ndash; now it seems like compiler unrolled our main loop and compare bytes in chunks of size 8:</p>
-      <pre><code><span class="comment"># there is just a part of the assembler, you can find full output by the godbolt link</span></code>
+      <pre class="language-asm"><code><span class="comment"># there is just a part of the assembler, you can find full output by the godbolt link</span></code>
 <code>.LBB0_11:</code>
 <code>        <span class="keyword">cmp</span>     byte ptr [r8 + r11 - <span class="number">1</span>], dl</code>
 <code>        <span class="keyword">lea</span>     r14, [rsi + r11 - <span class="number">1</span>]</code>
@@ -90,9 +90,9 @@
       <p>That&rsquo;s looks promising! Unrolling will help in performance by itself, but we can be on the right path to the successful vectorization guidance for the compiler!</p>
     </section>
     <section id="Vectorization-by-any-means">
-      <h3>Vectorization by any means!</h3>
-      <p>At this point, I had no clue of how I can simplify life of the compiler except only one last thing &ndash; we can make slice length constant and hope that this will finally activate vectorization engine in the <code>LLVM</code>. Turns out that this was enough! If we will use <code>[u8; 16]</code> or <code>[u8; 32]</code> types for input arguments &ndash; then <code>LLVM</code> <a href="https://godbolt.org/z/csYjj769s">will use</a> <code>128</code>-bit or <code>256</code>-bit <code>SSE</code> / <code>AVX</code> registers and corresponding instructions!</p>
-      <pre><code>example::find_branchless:</code>
+      <a class="heading-anchor" href="#Vectorization-by-any-means"><h3>Vectorization by any means!</h3>
+      </a><p>At this point, I had no clue of how I can simplify life of the compiler except only one last thing &ndash; we can make slice length constant and hope that this will finally activate vectorization engine in the <code>LLVM</code>. Turns out that this was enough! If we will use <code>[u8; 16]</code> or <code>[u8; 32]</code> types for input arguments &ndash; then <code>LLVM</code> <a href="https://godbolt.org/z/csYjj769s">will use</a> <code>128</code>-bit or <code>256</code>-bit <code>SSE</code> / <code>AVX</code> registers and corresponding instructions!</p>
+      <pre class="language-asm"><code>example::find_branchless:</code>
 <code>        <span class="keyword">vmovd</span>   xmm0, esi</code>
 <code>        <span class="keyword">vpbroadcastb</span>    xmm0, xmm0</code>
 <code>        <span class="keyword">vpcmpeqb</span>        xmm0, xmm0, xmmword ptr [rdi]</code>
@@ -116,21 +116,21 @@
       <p>You can notice that compiler generates truly branch-less code (literally, no jump instructions!). This can be surprising at the first sight, but actually compiler make use of <code>cmove</code> (&ldquo;conditional move&rdquo;) instruction which move value between operands only if the flags register are in the specific state. This instruction has way better performance then ordinary <code>CMP</code> / <code>JEQ</code> pair and allow to implement simple conditional scenarios like we have in the branch-less implementation of <code>find</code> function.</p>
     </section>
     <section id="Vectorized-version-of-find">
-      <h3>Vectorized version of <code>find</code></h3>
-      <p>Ok, that&rsquo;s great that we finally forced <code>rustc</code> to use vectorization. But current <code>find</code> implementation is barely usable because it works only for byte arrays of fixed size! What can we do about that?</p>
+      <a class="heading-anchor" href="#Vectorized-version-of-find"><h3>Vectorized version of <code>find</code></h3>
+      </a><p>Ok, that&rsquo;s great that we finally forced <code>rustc</code> to use vectorization. But current <code>find</code> implementation is barely usable because it works only for byte arrays of fixed size! What can we do about that?</p>
       <p>Here the actions are straightforward &ndash; we can split our input slice in chunks of bounded size and try to apply our branch-less implementation of <code>find</code> method for them. <code>Rust</code> has nice <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks"><code>chunks</code></a> function which do exactly what we want, let&rsquo;s try to use it:</p>
-      <pre><code><span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
+      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
 <code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="identifier">haystack</span></code>
-<code>        .<span class="function">chunks</span>(<span class="number">32)</span></code>
+<code>        .<span class="function">chunks</span>(<span class="number">32</span>)</code>
 <code>        .<span class="function">enumerate</span>()</code>
-<code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32 </span>* <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
+<code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32</span> * <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
 <code>}</code>
 </pre>
       <p>Unfortunately, this doesn&rsquo;t work &ndash; the compiler again produces boring assembly with only unrolling optimization on. But, if we stop and think about it, this is actually expected! Chunking logic make every chunk unpredictable in size &ndash; because there is no guarantees about exact size of the last chunk (and every chunk can be the last one!).</p>
       <p>Luckily, <code>Rust</code> developer team thought about this and added method <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks_exact"><code>chunks_exact</code></a> specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: <code>remainder</code>.</p>
       <p>This final step allow us to make our dream come true: <a href="https://godbolt.org/z/Kja5WGjMf">vectorized <code>find</code> function</a> with only safe <code>Rust</code>!</p>
-      <pre><code><span class="comment">// bonus: refactoring of find_branchless function to make it more elegant!</span></code>
+      <pre class="language-rust"><code><span class="comment">// bonus: refactoring of find_branchless function to make it more elegant!</span></code>
 <code><span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="keyword">return</span> <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">enumerate</span>()</code>
 <code>        .<span class="function">filter</span>(|(_, &<span class="identifier">b</span>)| <span class="identifier">b</span> == <span class="identifier">needle</span>)</code>
@@ -138,17 +138,17 @@
 <code>}</code>
 <code></code>
 <code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
-<code>    <span class="keyword">let</span> <span class="identifier">chunks</span> = <span class="identifier">haystack</span>.<span class="function">chunks_exact</span>(<span class="number">32)</span>;</code>
+<code>    <span class="keyword">let</span> <span class="identifier">chunks</span> = <span class="identifier">haystack</span>.<span class="function">chunks_exact</span>(<span class="number">32</span>);</code>
 <code>    <span class="keyword">let</span> <span class="identifier">remainder</span> = <span class="identifier">chunks</span>.<span class="function">remainder</span>();</code>
 <code>    <span class="identifier">chunks</span>.<span class="function">enumerate</span>()</code>
-<code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32 </span>* <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
-<code>        .<span class="function">or</span>(<span class="function">find_branchless</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| (<span class="identifier">haystack</span>.<span class="function">len</span>() & !<span class="number">0x1</span><span class="identifier">f</span>) + <span class="identifier">x</span>))</code>
+<code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32</span> * <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
+<code>        .<span class="function">or</span>(<span class="function">find_branchless</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| (<span class="identifier">haystack</span>.<span class="function">len</span>() & !<span class="number">0</span><span class="identifier">x1f</span>) + <span class="identifier">x</span>))</code>
 <code>}</code>
 </pre>
     </section>
     <section id="Benchmarks">
-      <h3>Benchmarks</h3>
-      <p>The full benchmark source code is available here: <a href="https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench">./rust-find-bench</a></p>
+      <a class="heading-anchor" href="#Benchmarks"><h3>Benchmarks</h3>
+      </a><p>The full benchmark source code is available here: <a href="https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench">./rust-find-bench</a></p>
       <table>
         <tr>
           <th style="text-align: left;">method</th>

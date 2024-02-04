@@ -33,17 +33,9 @@ h1, h2, h3, h4, h5, h6 {
     position: relative;
 }
 
-.title::after {
-    display: block;
-    content: ' (date: ' attr(date) ') ';
-    color: gray;
-    font-family: monospace;
-    font-weight: normal;
-}
-
 blockquote {
-    border-left: 4px solid gray;
-    padding-left: 8px;
+    border-left: 1px solid gray;
+    padding-left: 4px;
 }
 
 code > .keyword {
@@ -72,8 +64,8 @@ code > .command {
 }
 
 pre {
-    border-left: 4px solid gray;
-    padding-left: 8px;
+    border-left: 1px solid rgb(128, 128, 128);
+    padding-left: 4px;
     white-space: pre-wrap;
 }
 
@@ -90,12 +82,13 @@ pre code {
 }
 
 pre:not(.noline) code::before {
-    content: counter(listing) ". ";
+    content: counter(listing);
     display: inline-block;
-    width: 2em;
-    margin-left: auto;
     text-align: right;
-    color: gray;
+    color: rgb(128, 128, 128);
+    width: 2em;
+    margin-right: 1em;
+    margin-left: -3em;
 }
 
 figure {
@@ -143,4 +136,24 @@ tr > * {
 .footer {
     display: flex;
     flex-direction: row-reverse;
+}
+
+.heading-anchor:link, .heading-anchor:visited, .heading-anchor:active {
+    color: black;
+    text-decoration: none;
+}
+
+.heading-anchor:hover {
+    text-decoration: underline;
+}
+
+.heading-anchor:hover > h1::before,
+.heading-anchor:hover > h2::before,
+.heading-anchor:hover > h3::before,
+.heading-anchor:hover > h4::before,
+.heading-anchor:hover > h5::before,
+.heading-anchor:hover > h6::before {
+    content: '#';
+    position: absolute;
+    left: -1em;
 }

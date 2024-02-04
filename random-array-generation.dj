@@ -1,0 +1,59 @@
+{date="2024/01/28" hide="true"}
+# Generate random bit string with k ones, succinct!
+
+While solving [12th day challenge][aoc2023day12] of recent Advent of Code I ran into following subtask required for the full solution (don't ask me why, but I tried to solve first AoC challenges with `O(1)` additional memory):
+
+[aoc2023day12]: https://adventofcode.com/2023/day/12
+
+> You need to *uniformly* generate random array A = [a~0~, a~1~, ..., a~k-1~], 0 ≤ a~i~ \< *L* such that a~i+1~ - a~i~ - 1 ≥ *D~i~* ≥ 0 and *L* - a~k-1~ - 1 ≥ *D~k-1~*
+>
+> _(must be at least *D~i~* empty space between adjacent positions + must be at least *D~k-1~* space for last position)_
+>
+> For example, for *L = 7*, *k = 3* and *D = [1, 2, 0]* there are 4 valid arrays configurations:
+>
+> 1. *A = [0, 2, 5]*, *1011010*
+> 2. *A = [0, 2, 6]*, *1011001*
+> 3. *A = [0, 3, 6]*, *1001101*
+> 4. *A = [1, 3, 6]*, *0101101*
+>
+> _(on the right --- field configuration from AoC task where blocks of given length should be placed in line)_
+
+It's not hard to see that this problem is equivalent to the problem of choosing *k* elements from the *N = L - ∑D~i~* options. In our example we need to choose *k = 3* elements from *N = 4* options so we have *C(4, 3) = 4* assignments in total.
+
+> 1. *1110* -- *1*0*1*10*1**0*
+> 2. *1101* -- *1*0*1*10*0**1*
+> 3. *1011* -- *1*0*0**1*10*1*
+> 4. *0111* -- *0**1*0*1*10*1*
+
+So, how can we uniformly generate random bit string of length *N* with exactly *k* ones fast using only constant amount of memory?
+
+## Simple solution
+
+The simplest option is to just take valid array and apply any permutation algorithm to it.   
+
+The hardest condition here is the uniformity restriction without which we can easily implement very fast generation function with some degree of randomness:
+
+```rust
+pub fn generate_non_uniform<'a>(rng: &'a mut SmallRng, l: i32, d: &'a [i32]) -> impl Iterator<Item=i32> + 'a {
+    let mut reserved = d.iter().sum::<i32>();
+    return std::iter::once(0).chain(d.iter().copied()).scan(0, move |pos, d| {
+        let delta = rng.gen_range(0..l - reserved);
+        reserved += delta;
+        *pos += d + delta;
+        Some(*pos)
+    });
+}
+/*
+    $> make run-non-uniform
+    112 non-uniform: [0, 2, 6]
+    117 non-uniform: [0, 2, 5]
+    250 non-uniform: [0, 3, 6]
+    521 non-uniform: [1, 3, 6]
+*/
+```
+
+## Slow solution
+
+## Faster solution
+
+## Fast solution
