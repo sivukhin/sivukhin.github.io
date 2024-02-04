@@ -16,78 +16,77 @@
     </div>
     <div class="article">
     <section id="Generate-random-bit-string-with-k-ones-succinct">
-      <a class="heading-anchor" href="#Generate-random-bit-string-with-k-ones-succinct"><h1 date="2024/01/28" hide="true">Generate random bit string with k ones, succinct!</h1>
-      </a><p>While solving <a href="https://adventofcode.com/2023/day/12">12th day challenge</a> of recent Advent of Code I ran into following subtask required for the full solution (don&rsquo;t ask me why, but I tried to solve first AoC challenges with <code>O(1)</code> additional memory):</p>
+      <a class="heading-anchor" href="#Generate-random-bit-string-with-k-ones-succinct"><h1 date="2024/02/04">Generate random bit string with k ones, succinct!</h1>
+      </a><p>While solving <a href="https://adventofcode.com/2023/day/12">12th day challenge</a> of recent Advent of Code I ran into following subtask required for the solution:</p>
       <blockquote>
-        <p>You need to <strong>uniformly</strong> generate random array A = [a<sub>0</sub>, a<sub>1</sub>, &hellip;, a<sub>k-1</sub>], 0 ≤ a<sub>i</sub> < <strong>L</strong> such that a<sub>i+1</sub> - a<sub>i</sub> - 1 ≥ <strong>D<sub>i</sub></strong> ≥ 0 and <strong>L</strong> - a<sub>k-1</sub> - 1 ≥ <strong>D<sub>k-1</sub></strong></p>
-        <p><em>(must be at least <strong>D<sub>i</sub></strong> empty space between adjacent positions + must be at least <strong>D<sub>k-1</sub></strong> space for last position)</em></p>
-        <p>For example, for <strong>L = 7</strong>, <strong>k = 3</strong> and <strong>D = [1, 2, 0]</strong> there are 4 valid arrays configurations:</p>
+        <p>You need to <strong>uniformly</strong> generate random array of bits B = [b<sub>0</sub>, b<sub>1</sub>, &hellip;, b<sub>n-1</sub>], such that there is exactly k ones</p>
+        <p>For example, for <strong>n = 4</strong>, <strong>k = 2</strong> there are 6 valid arrays configurations:</p>
         <ol>
           <li>
-            <strong>A = [0, 2, 5]</strong>, <strong>1011010</strong>
+            <strong>B = 1100</strong>
           </li>
           <li>
-            <strong>A = [0, 2, 6]</strong>, <strong>1011001</strong>
+            <strong>B = 1010</strong>
           </li>
           <li>
-            <strong>A = [0, 3, 6]</strong>, <strong>1001101</strong>
+            <strong>B = 1001</strong>
           </li>
           <li>
-            <strong>A = [1, 3, 6]</strong>, <strong>0101101</strong>
-          </li>
-        </ol>
-        <p><em>(on the right &mdash; field configuration from AoC task where blocks of given length should be placed in line)</em></p>
-      </blockquote>
-      <p>It&rsquo;s not hard to see that this problem is equivalent to the problem of choosing <strong>k</strong> elements from the <strong>N = L - ∑D<sub>i</sub></strong> options. In our example we need to choose <strong>k = 3</strong> elements from <strong>N = 4</strong> options so we have <strong>C(4, 3) = 4</strong> assignments in total.</p>
-      <blockquote>
-        <ol>
-          <li>
-            <strong>1110</strong> &ndash; <strong>1</strong>0<strong>1</strong>10<strong>1</strong><strong>0</strong>
+            <strong>B = 0110</strong>
           </li>
           <li>
-            <strong>1101</strong> &ndash; <strong>1</strong>0<strong>1</strong>10<strong>0</strong><strong>1</strong>
+            <strong>B = 0101</strong>
           </li>
           <li>
-            <strong>1011</strong> &ndash; <strong>1</strong>0<strong>0</strong><strong>1</strong>10<strong>1</strong>
-          </li>
-          <li>
-            <strong>0111</strong> &ndash; <strong>0</strong><strong>1</strong>0<strong>1</strong>10<strong>1</strong>
+            <strong>B = 0011</strong>
           </li>
         </ol>
       </blockquote>
-      <p>So, how can we uniformly generate random bit string of length <strong>N</strong> with exactly <strong>k</strong> ones fast using only constant amount of memory?</p>
+      <p>It&rsquo;s not a direct subtask and couple reductions required before getting into this problem statement &mdash; but this is not so important (and anyway I chose very weird approach to use randomized algorithm with <code>O(1)</code> additional space just for fun).</p>
+      <p>So, how can we uniformly generate random bit string of length <strong><code>n</code></strong> with exactly <strong><code>k</code></strong> ones fast using only constant amount of memory?</p>
     </section>
-    <section id="Simple-solution">
-      <a class="heading-anchor" href="#Simple-solution"><h2>Simple solution</h2>
-      </a><p>The simplest option is to just take valid array and apply any permutation algorithm to it.   </p>
-      <p>The hardest condition here is the uniformity restriction without which we can easily implement very fast generation function with some degree of randomness:</p>
-      <pre class="language-rust"><code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="identifier">generate_non_uniform</span><'<span class="identifier">a</span>>(<span class="identifier">rng</span>: &'<span class="identifier">a</span> <span class="keyword">mut</span> <span class="identifier">SmallRng</span>, <span class="identifier">l</span>: <span class="identifier">i32</span>, <span class="identifier">d</span>: &'<span class="identifier">a</span> [<span class="identifier">i32</span>]) -> <span class="keyword">impl</span> <span class="identifier">Iterator</span><<span class="identifier">Item</span>=<span class="identifier">i32</span>> + '<span class="identifier">a</span> {</code>
-<code>    <span class="keyword">let</span> <span class="keyword">mut</span> <span class="identifier">reserved</span> = <span class="identifier">d</span>.<span class="function">iter</span>().<span class="identifier">sum</span>::<<span class="identifier">i32</span>>();</code>
-<code>    <span class="keyword">return</span> <span class="identifier">std</span>::<span class="identifier">iter</span>::<span class="function">once</span>(<span class="number">0</span>).<span class="function">chain</span>(<span class="identifier">d</span>.<span class="function">iter</span>().<span class="function">copied</span>()).<span class="function">scan</span>(<span class="number">0</span>, <span class="keyword">move</span> |<span class="identifier">pos</span>, <span class="identifier">d</span>| {</code>
-<code>        <span class="keyword">let</span> <span class="identifier">delta</span> = <span class="identifier">rng</span>.<span class="function">gen_range</span>(<span class="number">0.</span>.<span class="identifier">l</span> - <span class="identifier">reserved</span>);</code>
-<code>        <span class="identifier">reserved</span> += <span class="identifier">delta</span>;</code>
-<code>        *<span class="identifier">pos</span> += <span class="identifier">d</span> + <span class="identifier">delta</span>;</code>
-<code>        <span class="function">Some</span>(*<span class="identifier">pos</span>)</code>
-<code>    });</code>
+    <section id="Simple-approach">
+      <a class="heading-anchor" href="#Simple-approach"><h2>Simple approach</h2>
+      </a><p>The simplest option is to just take valid array configuration and apply random fair shuffle algorithm to it.</p>
+      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">generate_non_succinct</span>(<span class="identifier">rng</span>: &<span class="keyword">mut</span> <span class="identifier">SmallRng</span>, <span class="identifier">n</span>: <span class="identifier">usize</span>, <span class="identifier">k</span>: <span class="identifier">usize</span>) -> <span class="identifier">Vec</span><<span class="identifier">i32</span>> {</code>
+<code>    <span class="keyword">let</span> <span class="keyword">mut</span> <span class="identifier">array</span>: <span class="identifier">Vec</span><<span class="identifier">i32</span>> = <span class="function">repeat</span>(<span class="number">1</span>).<span class="function">take</span>(<span class="identifier">k</span>).<span class="function">chain</span>(<span class="function">repeat</span>(<span class="number">0</span>).<span class="function">take</span>(<span class="identifier">n</span> - <span class="identifier">k</span>)).<span class="function">collect</span>();</code>
+<code>    <span class="identifier">array</span>.<span class="function">shuffle</span>(<span class="identifier">rng</span>);</code>
+<code>    <span class="keyword">return</span> <span class="identifier">array</span>;</code>
 <code>}</code>
-<code><span class="comment">/*</code>
-<code></span><span class="comment">    $> make run-non-uniform</code>
-<code></span><span class="comment">    112 non-uniform: [0, 2, 6]</code>
-<code></span><span class="comment">    117 non-uniform: [0, 2, 5]</code>
-<code></span><span class="comment">    250 non-uniform: [0, 3, 6]</code>
-<code></span><span class="comment">    521 non-uniform: [1, 3, 6]</code>
-<code></span><span class="comment">*/</span></code>
 </pre>
+      <p>This is perfect approach which should be used in any real-life problem as it simple, concise, robust and performant enough. But unfortunately, this solution requires <code>O(n)</code> additional memory for generating routine &ndash; which is not what we wanted to accomplish.</p>
     </section>
-    <section id="Slow-solution">
-      <a class="heading-anchor" href="#Slow-solution"><h2>Slow solution</h2>
-      </a></section>
-    <section id="Faster-solution">
-      <a class="heading-anchor" href="#Faster-solution"><h2>Faster solution</h2>
-      </a></section>
     <section id="Fast-solution">
       <a class="heading-anchor" href="#Fast-solution"><h2>Fast solution</h2>
-      </a></section>
+      </a><p>Actually, fast succinct solution is pretty easy and straightforward &ndash; we can just maintain amount of generated ones <strong><strong>s</strong></strong> on the prefix of length <strong><strong>i</strong></strong> and put next one with probability <strong><strong><code>(k-s)/(n-i)</code></strong></strong>. The code for this procedure is very simple (and also cool, thanks to the <a href="https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.scan">scan</a> stateful method in <code>std::iter</code>):</p>
+      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="identifier">generate_succinct</span><'<span class="identifier">a</span>>(<span class="identifier">rng</span>: &'<span class="identifier">a</span> <span class="keyword">mut</span> <span class="identifier">SmallRng</span>, <span class="identifier">n</span>: <span class="identifier">usize</span>, <span class="identifier">k</span>: <span class="identifier">usize</span>) -> <span class="keyword">impl</span> <span class="identifier">Iterator</span><<span class="identifier">Item</span>=<span class="identifier">i32</span>> + '<span class="identifier">a</span> {</code>
+<code>    <span class="keyword">return</span> (<span class="number">0.</span>.<span class="identifier">n</span>).<span class="function">scan</span>(<span class="number">0</span>, <span class="keyword">move</span> |<span class="identifier">s</span>, <span class="identifier">i</span>| {</code>
+<code>        <span class="keyword">let</span> <span class="identifier">outcome</span> = <span class="keyword">if</span> <span class="identifier">rng</span>.<span class="function">gen_range</span>(<span class="number">0.</span>.<span class="identifier">n</span>-<span class="identifier">i</span>) < <span class="identifier">k</span> - *<span class="identifier">s</span> { <span class="number">1</span> } <span class="keyword">else</span> { <span class="number">0</span> };</code>
+<code>        *<span class="identifier">s</span> += <span class="identifier">outcome</span>;</code>
+<code>        <span class="function">Some</span>(<span class="identifier">outcome</span> <span class="keyword">as</span> <span class="identifier">i32</span>)</code>
+<code>    });</code>
+<code>}</code>
+</pre>
+      <p>It&rsquo;s not so straightforward to prove that every sequence has same probability equals to <strong><strong><code>1/C(n, k)</code></strong></strong> where <strong><strong><a href="https://en.wikipedia.org/wiki/Binomial_coefficient"><code>C(n,k)</code></a></strong></strong> is <strong><strong><code>n!/k!/(n-k)!</code></strong></strong>. </p>
+      <p>First, we need to show that <code>generate_succinct</code> function can generate every possible array with <strong><strong><code>k</code></strong></strong> ones and no other output can be generated with this function. Indeed, we can&rsquo;t generate sequences with <strong><strong><code>> k</code></strong></strong> ones as we will have <code>0%</code> probability of generating <strong><strong>1</strong></strong> when we reach exactly <strong><strong><code>k</code></strong></strong> ones in a prefix (<strong><strong><code>k - *s == 0</code></strong></strong>). Also, we can&rsquo;t generate sequences with <strong><strong><code>< k</code></strong></strong> ones as at some point we will inevitably have <code>100%</code> probability of generating <strong><strong>1</strong></strong> (<strong><strong><code>n - i == k - *s</code></strong></strong>).</p>
+      <p>Last move &ndash; we need to prove that every possible outcome will have same probability. We are making exactly <strong><strong><code>n</code></strong></strong> choices with probability of <strong><strong><code>(k-s)/(n-i)</code></strong></strong> each. If we multiply all denominators independently we will immediately get <strong><strong><code>n!</code></strong></strong>. Considering nominator of all positive choices (generating <strong><strong>1</strong></strong>) independently we will get <strong><strong><code>k!</code></strong></strong>. And finally &ndash; nominators for all negative choices (generating <strong><strong>0</strong></strong>) will get us <strong><strong><code>(n-k)!</code></strong></strong>.</p>
+    </section>
+    <section id="Weird-solution">
+      <a class="heading-anchor" href="#Weird-solution"><h2>Weird solution</h2>
+      </a><p>In the AoC solution I implemented another approach for generating sequence succinctly. Due to the task specific I was allowed to generated bad sequences given that they can be easily filtered out without any additional memory. Considering this, I chose to generate random binary sequence with skewed one probability of <strong><strong><code>k/n</code></strong></strong>. This way we will get correct sequence with probability <strong><strong><code>C(n,k)*(k/n)</code><sup><code>k</code></sup><code>*((n-k)/n)</code><sup><code>n-k</code></sup></strong></strong>. If we are interested in asymptotic approximation we can use <a href="https://en.wikipedia.org/wiki/Stirling%27s_approximation">Stirling formula</a> and get following probability: <strong><strong><code>√n / √(2π k(n-k))</code></strong></strong>. We should be careful with applying this formula to edge cases with very small / very large k values as approximation for binomial coefficient will work only if <strong><strong><code>k = Ω(1)</code></strong></strong> and <strong><strong><code>n - k = Ω(1)</code></strong></strong>. Although from empiric results it seems like this approximate gives pretty good results:</p>
+      <pre class="language-python"><code>>>> <span class="keyword">import</span> <span class="identifier">math</span></code>
+<code>>>> <span class="identifier">probs</span> = [</code>
+<code>    (<span class="function">c</span>(<span class="identifier">n</span>, <span class="identifier">k</span>) * <span class="identifier">k</span>**<span class="identifier">k</span> * (<span class="identifier">n</span> - <span class="identifier">k</span>)**(<span class="identifier">n</span> - <span class="identifier">k</span>) / (<span class="identifier">n</span>**<span class="identifier">n</span>), <span class="identifier">math</span>.<span class="function">sqrt</span>(<span class="identifier">n</span> / (<span class="number">2</span> * <span class="identifier">math</span>.<span class="identifier">pi</span> * <span class="identifier">k</span> * (<span class="identifier">n</span> - <span class="identifier">k</span>))), <span class="identifier">n</span>, <span class="identifier">k</span>) </code>
+<code>    <span class="keyword">for</span> <span class="identifier">n</span> <span class="keyword">in</span> <span class="function">range</span>(<span class="number">1</span>, <span class="number">1024</span>) </code>
+<code>    <span class="keyword">for</span> <span class="identifier">k</span> <span class="keyword">in</span> <span class="function">range</span>(<span class="number">1</span>, <span class="identifier">n</span>)</code>
+<code>]</code>
+<code>>>> <span class="function">max</span>([(<span class="identifier">approx</span> / <span class="identifier">actual</span>, <span class="identifier">n</span>, <span class="identifier">k</span>) <span class="keyword">for</span> (<span class="identifier">actual</span>, <span class="identifier">approx</span>, <span class="identifier">n</span>, <span class="identifier">k</span>) <span class="keyword">in</span> <span class="identifier">probs</span>])</code>
+<code>(<span class="number">1.1283791670955126</span>, <span class="number">2</span>, <span class="number">1</span>)</code>
+<code>>>> <span class="function">min</span>([(<span class="identifier">approx</span> / <span class="identifier">actual</span>, <span class="identifier">n</span>, <span class="identifier">k</span>) <span class="keyword">for</span> (<span class="identifier">actual</span>, <span class="identifier">approx</span>, <span class="identifier">n</span>, <span class="identifier">k</span>) <span class="keyword">in</span> <span class="identifier">probs</span>])</code>
+<code>(<span class="number">1.0002444094121852</span>, <span class="number">1023</span>, <span class="number">511</span>)</code>
+</pre>
+      <p>We can see that for all possible parameters with <strong><strong><code>n<1024</code></strong></strong> probability approximation leads to not more than ~13% greater values. So, we can use this to estimate asymptotic of attempts required for good sequence generation. Given that good sequence generated with probability <strong><strong><code>p</code></strong></strong> it is well known fact (see <a href="https://en.wikipedia.org/wiki/Geometric_distribution">geometric distribution</a>) that average amount of attempts will be equal to <strong><strong><code>1/p</code></strong></strong> which is <strong><strong><code>√(2π k(n-k)) / √n = O(√k √(n-k) / √n)</code></strong></strong> which is <strong><strong><code>O(√n)</code></strong></strong> in worst case when <strong><strong><code>k = n/2</code></strong></strong>.</p>
+    </section>
 </div>
     <hr/>
     <div class="footer">

@@ -1,59 +1,82 @@
-{date="2024/01/28" hide="true"}
+{date="2024/02/04"}
 # Generate random bit string with k ones, succinct!
 
-While solving [12th day challenge][aoc2023day12] of recent Advent of Code I ran into following subtask required for the full solution (don't ask me why, but I tried to solve first AoC challenges with `O(1)` additional memory):
+While solving [12th day challenge][aoc2023day12] of recent Advent of Code I ran into following subtask required for the solution:
 
 [aoc2023day12]: https://adventofcode.com/2023/day/12
 
-> You need to *uniformly* generate random array A = [a~0~, a~1~, ..., a~k-1~], 0 ≤ a~i~ \< *L* such that a~i+1~ - a~i~ - 1 ≥ *D~i~* ≥ 0 and *L* - a~k-1~ - 1 ≥ *D~k-1~*
+> You need to *uniformly* generate random array of bits B = [b~0~, b~1~, ..., b~n-1~], such that there is exactly k ones
 >
-> _(must be at least *D~i~* empty space between adjacent positions + must be at least *D~k-1~* space for last position)_
+> For example, for *n = 4*, *k = 2* there are 6 valid arrays configurations:
 >
-> For example, for *L = 7*, *k = 3* and *D = [1, 2, 0]* there are 4 valid arrays configurations:
->
-> 1. *A = [0, 2, 5]*, *1011010*
-> 2. *A = [0, 2, 6]*, *1011001*
-> 3. *A = [0, 3, 6]*, *1001101*
-> 4. *A = [1, 3, 6]*, *0101101*
->
-> _(on the right --- field configuration from AoC task where blocks of given length should be placed in line)_
+> 1. *B = 1100*
+> 2. *B = 1010*
+> 3. *B = 1001*
+> 4. *B = 0110*
+> 5. *B = 0101*
+> 6. *B = 0011*
 
-It's not hard to see that this problem is equivalent to the problem of choosing *k* elements from the *N = L - ∑D~i~* options. In our example we need to choose *k = 3* elements from *N = 4* options so we have *C(4, 3) = 4* assignments in total.
+It's not a direct subtask and couple reductions required before getting into this problem statement --- but this is not so important (and anyway I chose very weird approach to use randomized algorithm with `O(1)` additional space just for fun).
 
-> 1. *1110* -- *1*0*1*10*1**0*
-> 2. *1101* -- *1*0*1*10*0**1*
-> 3. *1011* -- *1*0*0**1*10*1*
-> 4. *0111* -- *0**1*0*1*10*1*
+So, how can we uniformly generate random bit string of length *`n`* with exactly *`k`* ones fast using only constant amount of memory?
 
-So, how can we uniformly generate random bit string of length *N* with exactly *k* ones fast using only constant amount of memory?
+## Simple approach
 
-## Simple solution
-
-The simplest option is to just take valid array and apply any permutation algorithm to it.   
-
-The hardest condition here is the uniformity restriction without which we can easily implement very fast generation function with some degree of randomness:
+The simplest option is to just take valid array configuration and apply random fair shuffle algorithm to it.
 
 ```rust
-pub fn generate_non_uniform<'a>(rng: &'a mut SmallRng, l: i32, d: &'a [i32]) -> impl Iterator<Item=i32> + 'a {
-    let mut reserved = d.iter().sum::<i32>();
-    return std::iter::once(0).chain(d.iter().copied()).scan(0, move |pos, d| {
-        let delta = rng.gen_range(0..l - reserved);
-        reserved += delta;
-        *pos += d + delta;
-        Some(*pos)
-    });
+fn generate_non_succinct(rng: &mut SmallRng, n: usize, k: usize) -> Vec<i32> {
+    let mut array: Vec<i32> = repeat(1).take(k).chain(repeat(0).take(n - k)).collect();
+    array.shuffle(rng);
+    return array;
 }
-/*
-    $> make run-non-uniform
-    112 non-uniform: [0, 2, 6]
-    117 non-uniform: [0, 2, 5]
-    250 non-uniform: [0, 3, 6]
-    521 non-uniform: [1, 3, 6]
-*/
 ```
 
-## Slow solution
-
-## Faster solution
+This is perfect approach which should be used in any real-life problem as it simple, concise, robust and performant enough. But unfortunately, this solution requires `O(n)` additional memory for generating routine -- which is not what we wanted to accomplish.
 
 ## Fast solution
+
+Actually, fast succinct solution is pretty easy and straightforward -- we can just maintain amount of generated ones **s** on the prefix of length **i** and put next one with probability **`(k-s)/(n-i)`**. The code for this procedure is very simple (and also cool, thanks to the [scan][rust-scan] stateful method in `std::iter`):
+
+[rust-scan]: https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.scan
+
+```rust
+fn generate_succinct<'a>(rng: &'a mut SmallRng, n: usize, k: usize) -> impl Iterator<Item=i32> + 'a {
+    return (0..n).scan(0, move |s, i| {
+        let outcome = if rng.gen_range(0..n-i) < k - *s { 1 } else { 0 };
+        *s += outcome;
+        Some(outcome as i32)
+    });
+}
+```
+
+It's not so straightforward to prove that every sequence has same probability equals to **`1/C(n, k)`** where **[`C(n,k)`][cnk]** is **`n!/k!/(n-k)!`**. 
+
+[cnk]: https://en.wikipedia.org/wiki/Binomial_coefficient
+
+First, we need to show that `generate_succinct` function can generate every possible array with **`k`** ones and no other output can be generated with this function. Indeed, we can't generate sequences with **`> k`** ones as we will have `0%` probability of generating **1** when we reach exactly **`k`** ones in a prefix (**`k - *s == 0`**). Also, we can't generate sequences with **`< k`** ones as at some point we will inevitably have `100%` probability of generating **1** (**`n - i == k - *s`**).
+
+Last move -- we need to prove that every possible outcome will have same probability. We are making exactly **`n`** choices with probability of **`(k-s)/(n-i)`** each. If we multiply all denominators independently we will immediately get **`n!`**. Considering nominator of all positive choices (generating **1**) independently we will get **`k!`**. And finally -- nominators for all negative choices (generating **0**) will get us **`(n-k)!`**.
+
+## Weird solution
+
+In the AoC solution I implemented another approach for generating sequence succinctly. Due to the task specific I was allowed to generated bad sequences given that they can be easily filtered out without any additional memory. Considering this, I chose to generate random binary sequence with skewed one probability of **`k/n`**. This way we will get correct sequence with probability **`C(n,k)*(k/n)`{^`k`^}`*((n-k)/n)`^`n-k`^**. If we are interested in asymptotic approximation we can use [Stirling formula][stirling] and get following probability: **`√n / √(2π k(n-k))`**. We should be careful with applying this formula to edge cases with very small / very large k values as approximation for binomial coefficient will work only if **`k = Ω(1)`** and **`n - k = Ω(1)`**. Although from empiric results it seems like this approximate gives pretty good results:
+
+[stirling]: https://en.wikipedia.org/wiki/Stirling%27s_approximation
+
+```python
+>>> import math
+>>> probs = [
+    (c(n, k) * k**k * (n - k)**(n - k) / (n**n), math.sqrt(n / (2 * math.pi * k * (n - k))), n, k) 
+    for n in range(1, 1024) 
+    for k in range(1, n)
+]
+>>> max([(approx / actual, n, k) for (actual, approx, n, k) in probs])
+(1.1283791670955126, 2, 1)
+>>> min([(approx / actual, n, k) for (actual, approx, n, k) in probs])
+(1.0002444094121852, 1023, 511)
+```
+
+We can see that for all possible parameters with **`n<1024`** probability approximation leads to not more than ~13% greater values. So, we can use this to estimate asymptotic of attempts required for good sequence generation. Given that good sequence generated with probability **`p`** it is well known fact (see [geometric distribution][geom]) that average amount of attempts will be equal to **`1/p`** which is **`√(2π k(n-k)) / √n = O(√k √(n-k) / √n)`** which is **`O(√n)`** in worst case when **`k = n/2`**.
+
+[geom]: https://en.wikipedia.org/wiki/Geometric_distribution
