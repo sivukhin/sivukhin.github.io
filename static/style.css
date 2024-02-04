@@ -162,3 +162,7 @@ tr > * {
     position: absolute;
     left: -1em;
 }
+
+.secret {
+    color: white
+}
