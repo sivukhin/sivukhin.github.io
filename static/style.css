@@ -67,6 +67,8 @@ pre {
     white-space: pre-wrap;
     padding-left: 2em;
     overflow-x: scroll;
+    padding-bottom: 8px;
+    margin-bottom: -8px;
 }
 
 pre {
