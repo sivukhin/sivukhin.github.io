@@ -1,7 +1,9 @@
 {tool="true"}
 # Timestamp converter
 
-`<input id="parse"/> <button onclick="parse()">parse</button> <span id="parsed"/>`{=html}
+`<input id="parse"/> <button onclick="parse()">parse</button>`{=html}
+
+`<span id="parsed"/>`{=html}
 
 ``` =html
 <script>
