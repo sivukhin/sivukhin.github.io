@@ -1,7 +1,12 @@
 {tool="true"}
 # Timestamp converter
 
-`<form action="javascript:parse(true)"><input id="parse"/> <button onclick="parse(true)">parse</button></form>`{=html}
+``` =html
+<form action="javascript:parse(true)">
+    <input type="number" id="parse"/>
+    <button onclick="parse(true)">parse</button>
+</form>
+```
 
 `<span id="parsed"/>`{=html}
 

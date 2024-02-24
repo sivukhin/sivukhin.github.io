@@ -17,8 +17,11 @@
     <div class="article">
     <section id="Timestamp-converter">
       <a class="heading-anchor" href="#Timestamp-converter"><h1 tool="true">Timestamp converter</h1>
-      </a><p><form action="javascript:parse(true)"><input id="parse"/> <button onclick="parse(true)">parse</button></form></p>
-      <p><span id="parsed"/></p>
+      </a><form action="javascript:parse(true)">
+    <input type="number" id="parse"/>
+    <button onclick="parse(true)">parse</button>
+</form>
+<p><span id="parsed"/></p>
 <script>
 var timestamp = Date.now()
 var searchParams = new URLSearchParams(window.location.search);
