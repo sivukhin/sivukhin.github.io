@@ -33,11 +33,13 @@ type Article struct {
 	Meta                             Meta
 	Link, Title, Content, Desc, Date string
 	Hide                             bool
+	Tool                             bool
 }
 
 type Articles struct {
 	Meta     Meta
 	Articles []Article
+	Tools    []Article
 }
 
 var (
@@ -82,6 +84,7 @@ func build(dir string, meta Meta) {
 	log.Printf("build godjotblog: start at dir '%v'", dir)
 	startTime := time.Now()
 	articles := make([]Article, 0)
+	tools := make([]Article, 0)
 	err := filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if info == nil || info.IsDir() {
 			return nil
@@ -94,14 +97,16 @@ func build(dir string, meta Meta) {
 			return err
 		}
 		ast := djot_parser.BuildDjotAst(djot)
-		var date, title, desc, hide string
+		var date, title, desc, hide, tool string
 		for _, node := range ast {
 			node.Traverse(func(node djot_parser.TreeNode[djot_parser.DjotNode]) {
 				if node.Type != djot_parser.HeadingNode {
 					return
 				}
-				if dateAttr, ok := node.Attributes.TryGet("date"); ok && date == "" {
+				if title == "" {
 					title = string(node.FullText())
+				}
+				if dateAttr, ok := node.Attributes.TryGet("date"); ok && date == "" {
 					date = dateAttr
 				}
 				if descAttr, ok := node.Attributes.TryGet("desc"); ok && desc == "" {
@@ -109,6 +114,9 @@ func build(dir string, meta Meta) {
 				}
 				if hideAttr, ok := node.Attributes.TryGet("hide"); ok && hide == "" {
 					hide = hideAttr
+				}
+				if toolAttr, ok := node.Attributes.TryGet("tool"); ok && tool == "" {
+					tool = toolAttr
 				}
 			})
 		}
@@ -182,14 +190,28 @@ func build(dir string, meta Meta) {
 				},
 			},
 		).ConvertDjotToHtml(&html_writer.HtmlWriter{Indentation: 4, TabSize: 2}, ast...)
-		article := Article{Link: link, Meta: meta, Title: title, Desc: desc, Date: date, Content: content, Hide: hide == "true"}
-		articles = append(articles, article)
+		article := Article{
+			Link:    link,
+			Meta:    meta,
+			Title:   title,
+			Desc:    desc,
+			Date:    date,
+			Content: content,
+			Hide:    hide == "true",
+			Tool:    tool == "true",
+		}
+		if article.Tool {
+			tools = append(tools, article)
+		} else {
+			articles = append(articles, article)
+		}
 		return articleTemplate.Execute(f, article)
 	})
 	if err != nil {
 		panic(err)
 	}
 	sort.Slice(articles, func(i, j int) bool { return articles[i].Date > articles[j].Date })
+	sort.Slice(tools, func(i, j int) bool { return articles[i].Title < articles[j].Title })
 
 	renderFile := func(p string, tmpl *template.Template) {
 		f, err := os.OpenFile(p, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0660)
@@ -197,7 +219,7 @@ func build(dir string, meta Meta) {
 			panic(err)
 		}
 		defer f.Close()
-		err = tmpl.Execute(f, Articles{Meta: meta, Articles: articles})
+		err = tmpl.Execute(f, Articles{Meta: meta, Articles: articles, Tools: tools})
 		if err != nil {
 			panic(err)
 		}

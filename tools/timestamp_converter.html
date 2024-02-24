@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="author" content="Nikita Sivukhin"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timestamp converter</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="page">
+    <div class="meta">
+        <header>
+            <h2><a href="/">naming is hard</a></h2>
+        </header>
+    </div>
+    <div class="article">
+    <section id="Timestamp-converter">
+      <a class="heading-anchor" href="#Timestamp-converter"><h1 tool="true">Timestamp converter</h1>
+      </a><p><input id="parse"/> <button onclick="parse()">parse</button> <span id="parsed"/></p>
+<script>
+var timestamp = Date.now()
+var searchParams = new URLSearchParams(window.location.search);
+if (searchParams.get("q") != null) {
+    document.getElementById("parse").value = searchParams.get("q");
+} else {
+    document.getElementById("parse").value = Date.now();
+}
+parse();
+
+function parse() {
+    var parsed = document.getElementById("parsed");
+    var text = document.getElementById("parse").value;
+    var timestamp = parseInt(text);
+    var date = null, unit = null;
+    if (!isNaN(timestamp) && timestamp >= 0) {
+        if (timestamp < 31_536_000_000) { // we have seconds here (31536000000 ~ 1000 years since 1970)
+            date = new Date(timestamp * 1000);
+            unit = "seconds";
+        } else if (timestamp < 31_536_000_000_000) { // we have milliseconds here
+            date = new Date(timestamp);
+            unit = "milliseconds";
+        } else if (timestamp < 31_536_000_000_000_000) { // we have nanoseconds here
+            date = new Date(timestamp / 1000);
+            unit = "nanoseconds";
+        }
+    }
+    if (date == null) {
+        parsed.innerText = "invalid timestamp '" + text + "'";
+    } else {
+        parsed.innerText = date.toUTCString() + " (units: " + unit + ")";
+        var searchParams = new URLSearchParams(window.location.search);
+        searchParams.set("q", timestamp);
+        var newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
+        history.pushState(null, '', newRelativePathQuery);
+    }
+}
+</script>
+</section>
+</div>
+    <hr/>
+    <div class="footer">
+        <p><a href="https://github.com/sivukhin/sivukhin.github.io">github link</a> (made with <a href="https://github.com/sivukhin/godjot">godjot</a> and <a href="https://github.com/sivukhin/gopeg">gopeg</a>)</p>
+    </div>
+</div>
+</body>
+</html>
