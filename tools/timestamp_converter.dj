@@ -1,7 +1,7 @@
 {tool="true"}
 # Timestamp converter
 
-`<input id="parse"/> <button onclick="parse()">parse</button>`{=html}
+`<form action="javascript:parse(true)"><input id="parse"/> <button onclick="parse(true)">parse</button></form>`{=html}
 
 `<span id="parsed"/>`{=html}
 
@@ -14,9 +14,9 @@ if (searchParams.get("q") != null) {
 } else {
     document.getElementById("parse").value = Date.now();
 }
-parse();
+parse(false);
 
-function parse() {
+function parse(updateUrl) {
     var parsed = document.getElementById("parsed");
     var text = document.getElementById("parse").value;
     var timestamp = parseInt(text);
@@ -37,10 +37,12 @@ function parse() {
         parsed.innerText = "invalid timestamp '" + text + "'";
     } else {
         parsed.innerText = date.toUTCString() + " (units: " + unit + ")";
-        var searchParams = new URLSearchParams(window.location.search);
-        searchParams.set("q", timestamp);
-        var newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
-        history.pushState(null, '', newRelativePathQuery);
+        if (updateUrl) {
+            var searchParams = new URLSearchParams(window.location.search);
+            searchParams.set("q", timestamp);
+            var newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
+            history.replaceState(null, '', newRelativePathQuery);
+        }
     }
 }
 </script>
