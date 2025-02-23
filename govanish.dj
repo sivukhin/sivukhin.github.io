@@ -1,7 +1,7 @@
 {date="2025/02/23"}
 # Go can remove code from the binary, and you may want to know that!
 
-One year ago I implemented a simple `Go` linter which leverages the power of the `Go` compiler to highlight potential bugs and it was able to find real issues in the software ([1](https://github.com/spacemeshos/go-spacemesh/pull/5873),[2](https://github.com/cloudflare/cloudflared/pull/1139),[3](https://github.com/wal-g/wal-g/pull/1612),[4](https://github.com/francoismichel/ssh3/pull/82),[5](https://github.com/apache/answer/pull/1229),[6](https://github.com/pdfcpu/pdfcpu/pull/762)).
+One year ago I implemented a simple `Go` linter which leverages the power of the `Go` compiler to highlight potential bugs and it was able to find real issues in the software ([go-spacemesh](https://github.com/spacemeshos/go-spacemesh/pull/5873),[cloudflared](https://github.com/cloudflare/cloudflared/pull/1139),[wal-g](https://github.com/wal-g/wal-g/pull/1612),[ssh3](https://github.com/francoismichel/ssh3/pull/82),[answer](https://github.com/apache/answer/pull/1229),[pdfcpu](https://github.com/pdfcpu/pdfcpu/pull/762)).
 
 The linter uses a quite interesting approach as it directly uses `Go` compiler output to find places of code which were removed by the compiler -- allowing it to detect non-trivial issues as long as the `Go` compiler can performs clever optimizations.
 
