@@ -37,7 +37,7 @@ func main() {
 Turns out that `alwaysNilInterface` always returns interface instance which has `nil` value but **non-`nil`** type information (because type is `*url.Error`) and this makes the value from this function unequal to a `nil` interface which has both type and value components set to `nil`!
 
 ::: note
-That's why you should always use `error` interface in Go instead of more specific types despite that in other languages you usually [{_return the most specific type, accept the most generic type_}](https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/))_
+That's why you should always use `error` interface in Go instead of more specific types despite that in other languages you usually [{_return the most specific type, accept the most generic type_}](https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/))
 :::
 
 ## Assembly

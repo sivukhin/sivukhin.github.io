@@ -44,7 +44,7 @@
 </pre>
       <p>Turns out that <code class="inline">alwaysNilInterface</code> always returns interface instance which has <code class="inline">nil</code> value but <strong><strong>non-<code class="inline">nil</code></strong></strong> type information (because type is <code class="inline">*url.Error</code>) and this makes the value from this function unequal to a <code class="inline">nil</code> interface which has both type and value components set to <code class="inline">nil</code>!</p>
       <div class="note">
-        <p>That&rsquo;s why you should always use <code class="inline">error</code> interface in Go instead of more specific types despite that in other languages you usually <a href="https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/"><em>return the most specific type, accept the most generic type</em></a>)_</p>
+        <p>That&rsquo;s why you should always use <code class="inline">error</code> interface in Go instead of more specific types despite that in other languages you usually <a href="https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/"><em>return the most specific type, accept the most generic type</em></a>)</p>
       </div>
     </section>
     <section id="Assembly">
