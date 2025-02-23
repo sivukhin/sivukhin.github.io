@@ -173,4 +173,4 @@ if !ok {
 }
  ```
 
- Overall, in the `rook` repository, `govanish` found two bugs with a 50% false positive rate -- which is pretty cool! While the average false positive rate of the linter is higher, `govanish` has still proven to be useful and capable of finding bugs that other linters miss. Give it a try and see how much code `Go` removes without your approval!
+Overall, in the `rook` repository, `govanish` found two bugs with a 50% false positive rate -- which is pretty cool! While the average false positive rate of the linter is higher, `govanish` has still proven to be useful and capable of finding bugs that other linters miss. Give it a try and see how much code `Go` removes without your approval!
