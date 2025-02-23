@@ -38,6 +38,10 @@ blockquote {
     padding-left: 4px;
 }
 
+code.inline {
+    font-size: 12pt;
+}
+
 code > .keyword {
     font-weight: bold;
 }
@@ -165,4 +169,10 @@ tr > * {
 
 .secret {
     color: white
+}
+
+.note {
+    padding: 1px 8px;
+    border-left: 5px solid orange;
+    background-color: lightgoldenrodyellow;
 }

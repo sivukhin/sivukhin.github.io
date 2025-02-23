@@ -17,15 +17,17 @@
     <div class="article">
     <section id="Go-can-remove-code-from-the-binary-and-you-may-want-to-know-that">
       <a class="heading-anchor" href="#Go-can-remove-code-from-the-binary-and-you-may-want-to-know-that"><h1 date="2025/02/23">Go can remove code from the binary, and you may want to know that!</h1>
-      </a><p>One year ago I implemented a simple <code>Go</code> linter which leverages the power of the <code>Go</code> compiler to highlight potential bugs and it was able to find real issues in the software (<a href="https://github.com/spacemeshos/go-spacemesh/pull/5873">go-spacemesh</a>,<a href="https://github.com/cloudflare/cloudflared/pull/1139">cloudflared</a>,<a href="https://github.com/wal-g/wal-g/pull/1612">wal-g</a>,<a href="https://github.com/francoismichel/ssh3/pull/82">ssh3</a>,<a href="https://github.com/apache/answer/pull/1229">answer</a>,<a href="https://github.com/pdfcpu/pdfcpu/pull/762">pdfcpu</a>).</p>
-      <p>The linter uses a quite interesting approach as it directly uses <code>Go</code> compiler output to find places of code which were removed by the compiler &ndash; allowing it to detect non-trivial issues as long as the <code>Go</code> compiler can performs clever optimizations.</p>
+      </a><p>One year ago I implemented a simple <code class="inline">Go</code> linter which leverages the power of the <code class="inline">Go</code> compiler to highlight potential bugs and it was able to find real issues in the software (<a href="https://github.com/spacemeshos/go-spacemesh/pull/5873">go-spacemesh</a>, <a href="https://github.com/cloudflare/cloudflared/pull/1139">cloudflared</a>, <a href="https://github.com/wal-g/wal-g/pull/1612">wal-g</a>, <a href="https://github.com/francoismichel/ssh3/pull/82">ssh3</a>, <a href="https://github.com/apache/answer/pull/1229">answer</a>, <a href="https://github.com/pdfcpu/pdfcpu/pull/762">pdfcpu</a>).</p>
+      <p>The linter uses a quite interesting approach as it directly uses <code class="inline">Go</code> compiler output to find places of code which were removed by the compiler &ndash; allowing it to detect non-trivial issues as long as the <code class="inline">Go</code> compiler can performs clever optimizations.</p>
       <p>So, let me tell a little story about linter development and meanwhile you can run it (<a href="https://github.com/sivukhin/govanish">govanish</a>) on your project and check if your code vanished from the binary without your approval!</p>
-      <p><em>Note: the idea of using <code>Go</code> compiler output for a linter is not unique. I have seen another linter with similar approach that validates all functions marked with special comment will be inlined by the compiler &ndash; but I can&rsquo;t find a proper reference to it right now</em></p>
+      <div class="note">
+        <p>The idea of using <code class="inline">Go</code> compiler output for a linter is not unique. I have seen another linter with similar approach that validates all functions marked with special comment will be inlined by the compiler &ndash; but I can&rsquo;t find a proper reference to it right now.</p>
+      </div>
     </section>
     <section id="Beginning">
       <a class="heading-anchor" href="#Beginning"><h2>Beginning</h2>
-      </a><p>Everything started with me playing around with <code>Go</code> and suddenly discovering tricky nuance of how <code>Go</code> interfaces are working.</p>
-      <p>Internally, every interface instance has two components: one that represents the underlying concrete <strong><strong>type</strong></strong> of the instance and another that represents the actual <strong><strong>value</strong></strong> of the instance. While this is not a surprise, it turns out that for interfaces to be considered equal, the <code>Go</code> compiler checks <strong><strong>both</strong></strong> components for equality. This behavior starting to play weirdly when you operate with <code>nil</code> values and <code>nil</code> interfaces (more detailed explanation can be found <a href="https://trstringer.com/go-nil-interface-and-interface-with-nil-concrete-value/">here</a>).</p>
+      </a><p>Everything started with me playing around with <code class="inline">Go</code> and suddenly discovering tricky nuance of how <code class="inline">Go</code> interfaces are working.</p>
+      <p>Internally, every interface instance has two components: one that represents the underlying concrete <strong><strong>type</strong></strong> of the instance and another that represents the actual <strong><strong>value</strong></strong> of the instance. While this is not a surprise, it turns out that for interfaces to be considered equal, the <code class="inline">Go</code> compiler checks <strong><strong>both</strong></strong> components for equality. This behavior starting to play weirdly when you operate with <code class="inline">nil</code> values and <code class="inline">nil</code> interfaces (more detailed explanation can be found <a href="https://trstringer.com/go-nil-interface-and-interface-with-nil-concrete-value/">here</a>).</p>
       <p>Look at the following code snippet:</p>
       <pre class="language-go"><code><span class="keyword">package</span> <span class="identifier">main</span></code>
 <code></code>
@@ -40,12 +42,14 @@
 <code>    }</code>
 <code>}</code>
 </pre>
-      <p>Turns out that <code>alwaysNilInterface</code> always returns interface instance which has <code>nil</code> value but <strong><strong>non-<code>nil</code></strong></strong> type information (because type is <code>*url.Error</code>) and this makes the value from this function unequal to a <code>nil</code> interface which has both type and value components set to <code>nil</code>!</p>
-      <p><em>(that&rsquo;s why you should always use <code>error</code> interface in Go instead of more specific types despite that in other languages you usually <a href="https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/"><em>return the most specific type, accept the most generic type</em></a>)</em></p>
+      <p>Turns out that <code class="inline">alwaysNilInterface</code> always returns interface instance which has <code class="inline">nil</code> value but <strong><strong>non-<code class="inline">nil</code></strong></strong> type information (because type is <code class="inline">*url.Error</code>) and this makes the value from this function unequal to a <code class="inline">nil</code> interface which has both type and value components set to <code class="inline">nil</code>!</p>
+      <div class="note">
+        <p>That&rsquo;s why you should always use <code class="inline">error</code> interface in Go instead of more specific types despite that in other languages you usually <a href="https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/"><em>return the most specific type, accept the most generic type</em></a>)_</p>
+      </div>
     </section>
     <section id="Assembly">
       <a class="heading-anchor" href="#Assembly"><h2>Assembly</h2>
-      </a><p>After discovering this nuance, I wondered how interface comparison works, which led me to examine the generated assembly for the snippet above (<em>by the way, Golang uses <a href="https://go.dev/doc/asm">Plan9</a> assembler syntax which is annoying sometimes as it&rsquo;s very hard to find description of instructions</em>). Luckily, Go provides an easy way to inspect the generated assembler code: we can just pass <code>-gcflags=-S</code> argument to the <code>go build</code> command. The output of the compiler looks like following:</p>
+      </a><p>After discovering this nuance, I wondered how interface comparison works, which led me to examine the generated assembly for the snippet above (<em>by the way, Golang uses <a href="https://go.dev/doc/asm">Plan9</a> assembler syntax which is annoying sometimes as it&rsquo;s very hard to find description of instructions</em>). Luckily, Go provides an easy way to inspect the generated assembler code: we can just pass <code class="inline">-gcflags=-S</code> argument to the <code class="inline">go build</code> command. The output of the compiler looks like following:</p>
       <pre class="language-asm"><code><span class="comment"># command-line-arguments</span></code>
 <code>...</code>
 <code>main.main <span class="keyword">STEXT</span> nosplit size=<span class="number">1</span> args=<span class="number">0</span>x0 locals=<span class="number">0</span>x0 funcid=<span class="number">0</span>x0 align=<span class="number">0</span>x0</code>
@@ -58,7 +62,7 @@
 <code>    <span class="keyword">rel</span> <span class="number">0</span><span class="number">+0</span> t=R_USEIFACE type:string<span class="number">+0</span></code>
 <code>...</code>
 </pre>
-      <p>That&rsquo;s interesting, because compiler completely removed conditional code from the <code>main</code> function body and just generates &ldquo;no-op&rdquo; executable. This is kind of expected behaviour: optimizing compiler should simplify code and remove &ldquo;useless&rdquo; operations &ndash; that&rsquo;s why we love them. But from the developer perspective it&rsquo;s actually bit suspicious, because the removal of code from the binary may indicate that something unexpected has happened: we wrote code <code>err == nil</code> condition on purpose and it&rsquo;s shouldn&rsquo;t result in constant result independent of the function inputs.</p>
+      <p>That&rsquo;s interesting, because compiler completely removed conditional code from the <code class="inline">main</code> function body and just generates &ldquo;no-op&rdquo; executable. This is kind of expected behaviour: optimizing compiler should simplify code and remove &ldquo;useless&rdquo; operations &ndash; that&rsquo;s why we love them. But from the developer perspective it&rsquo;s actually bit suspicious, because the removal of code from the binary may indicate that something unexpected has happened: we wrote code <code class="inline">err == nil</code> condition on purpose and it&rsquo;s shouldn&rsquo;t result in constant result independent of the function inputs.</p>
       <p>There is another interesting bit in the generated assembly &ndash; you can notice that every instruction annotated with the line of code which &ldquo;produced&rdquo; the sequence of assembler operations. That&rsquo;s cool! Let&rsquo;s look at which lines are actually in use in the final assembler code based on the compiler output:</p>
       <pre class="language-shell"><code><span class="command">$> go test -c -gcflags=-S main.go 2>&1 | grep -Po "main.go:\d+" | uniq</span></code>
 <code>main.go:5</code>
@@ -72,30 +76,30 @@
     <section id="Govanish">
       <a class="heading-anchor" href="#Govanish"><h2>Govanish</h2>
       </a><p>So, that&rsquo;s how <a href="https://github.com/sivukhin/govanish">govanish</a> linter actually works!</p>
-      <p>It builds your project with the <code>gcflags=-S</code> option and analyzes which lines of code are missed from the generated assembly. Not surprisingly, on a big projects linter is pretty noisy, that&rsquo;s why few heuristics were implemented to ignore from analysis few common cases when <code>Go</code> compiler remove or replace chunk of code logic in the final assembler listing:</p>
+      <p>It builds your project with the <code class="inline">gcflags=-S</code> option and analyzes which lines of code are missed from the generated assembly. Not surprisingly, on a big projects linter is pretty noisy, that&rsquo;s why few heuristics were implemented to ignore from analysis few common cases when <code class="inline">Go</code> compiler remove or replace chunk of code logic in the final assembler listing:</p>
       <ul>
         <li>
-Code like <code>for k := range m { delete(m, k) }</code> is not analyzed because <code>Go</code> compiler is clever enough to use <code>runtime.mapclear()</code> function in this case
+Code like <code class="inline">for k := range m { delete(m, k) }</code> is not analyzed because <code class="inline">Go</code> compiler is clever enough to use <code class="inline">runtime.mapclear()</code> function in this case
         </li>
         <li>
-Constant <code>true</code>/<code>false</code> conditions are not analyzed, because they are usually written for local debugging and intent is clear that the code should be removed by compiler
+Constant <code class="inline">true</code>/<code class="inline">false</code> conditions are not analyzed, because they are usually written for local debugging and intent is clear that the code should be removed by compiler
         </li>
         <li>
-Type constructors are not analyzed because in most cases they are no-op (e.g. <code>[]byte(net.IP{})</code>)
+Type constructors are not analyzed because in most cases they are no-op (e.g. <code class="inline">[]byte(net.IP{})</code>)
         </li>
         <li>
-Platform dependent code is not analyzed, because it will always trigger <code>govanish</code> on a wrong platform
+Platform dependent code is not analyzed, because it will always trigger <code class="inline">govanish</code> on a wrong platform
         </li>
         <li>
-Conditions which uses functions with constant returns (e.g. <code>return nil</code>) are not analyzed if function is defined in the module
+Conditions which uses functions with constant returns (e.g. <code class="inline">return nil</code>) are not analyzed if function is defined in the module
         </li>
       </ul>
-      <p>Still, even with these heuristics in place, <code>govanish</code> produces a lot of false positives especially around error checking code, because a lot of Go functions follow generic approach to return an error while actually they are never failing (e.g. <code>func (b *strings.Builder) Write(p []byte) (int, error)</code>). But on the other hand I find it fun to run <code>govanish</code> from time to time on popular projects and discover some bugs with it.</p>
+      <p>Still, even with these heuristics in place, <code class="inline">govanish</code> produces a lot of false positives especially around error checking code, because a lot of Go functions follow generic approach to return an error while actually they are never failing (e.g. <code class="inline">func (b *strings.Builder) Write(p []byte) (int, error)</code>). But on the other hand I find it fun to run <code class="inline">govanish</code> from time to time on popular projects and discover some bugs with it.</p>
     </section>
     <section id="Govanish-in-action">
       <a class="heading-anchor" href="#Govanish-in-action"><h2>Govanish in action</h2>
-      </a><p>Let&rsquo;s see <code>govanish</code> in action on some real project &ndash; I decided to pick the <a href="https://github.com/rook/rook/tree/master">rook</a> repository (there is an obviously an element of cherry-picking as I ran <code>govanish</code> on a several projects before <code>rook</code> and detected no real issues there).</p>
-      <p>So, you can clone the repository, install <code>govanish</code> and run it:</p>
+      </a><p>Let&rsquo;s see <code class="inline">govanish</code> in action on some real project &ndash; I decided to pick the <a href="https://github.com/rook/rook/tree/master">rook</a> repository (there is an obviously an element of cherry-picking as I ran <code class="inline">govanish</code> on a several projects before <code class="inline">rook</code> and detected no real issues there).</p>
+      <p>So, you can clone the repository, install <code class="inline">govanish</code> and run it:</p>
       <pre class="language-shell"><code><span class="command">$> go install github.com/sivukhin/govanish@latest</span></code>
 <code><span class="command">$> git clone https://github.com/rook/rook</span></code>
 <code><span class="command">$> cd rook</span></code>
@@ -111,10 +115,10 @@ Conditions which uses functions with constant returns (e.g. <code>return nil</co
 <code>::warning file=pkg/operator/discover/discover.go,line=440,endLine=444::seems like code vanished from compiled binary</code>
 <code>::warning file=pkg/operator/test/client.go,line=99,endLine=99::seems like code vanished from compiled binary</code>
 </pre>
-      <p><code>govanish</code> identified 4 code regions which do not match ignore heuristics and vanished from the final assembler listing. Let&rsquo;s look more closely all of them.</p>
+      <p><code class="inline">govanish</code> identified 4 code regions which do not match ignore heuristics and vanished from the final assembler listing. Let&rsquo;s look more closely all of them.</p>
       <ol>
         <li>
-          <p>In <a href="https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/k8sutil/pod.go#L167"><code>pkg/operator/k8sutil/pod.go</code></a> file at line <code>167</code> there is a return value which were removed by Go for some reason.</p>
+          <p>In <a href="https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/k8sutil/pod.go#L167"><code class="inline">pkg/operator/k8sutil/pod.go</code></a> file at line <code class="inline">167</code> there is a return value which were removed by Go for some reason.</p>
           <pre class="language-go" style="counter-set: listing 159"><code><span class="keyword">func</span> <span class="function">GetRunningPod</span>(<span class="identifier">ctx</span> <span class="identifier">context</span>.<span class="identifier">Context</span>, <span class="identifier">clientset</span> <span class="identifier">kubernetes</span>.<span class="identifier">Interface</span>) (*<span class="identifier">v1</span>.<span class="identifier">Pod</span>, <span class="identifier">error</span>) {</code>
 <code>    <span class="identifier">podName</span> := <span class="identifier">os</span>.<span class="function">Getenv</span>(<span class="identifier">PodNameEnvVar</span>)</code>
 <code>    <span class="keyword">if</span> <span class="identifier">podName</span> == <span class="string">""</span> {</code>
@@ -126,10 +130,10 @@ Conditions which uses functions with constant returns (e.g. <code>return nil</co
 <code>    }</code>
 <code>    ...</code>
 </pre>
-          <p>Here, we actually spotted a real <strong><strong>bug</strong></strong>, because the code obviously need to check <code>podNamespace</code> variable at line <code>165</code> instead of duplicate check of <code>podName</code> variable (<em>by the way, <code>Goland</code> also warns about this issue with <code>Condition is always false</code> rule</em>)</p>
+          <p>Here, we actually spotted a real <strong><strong>bug</strong></strong>, because the code obviously need to check <code class="inline">podNamespace</code> variable at line <code class="inline">165</code> instead of duplicate check of <code class="inline">podName</code> variable (<em>by the way, <code class="inline">Goland</code> also warns about this issue with <code class="inline">Condition is always false</code> rule</em>)</p>
         </li>
         <li>
-          <p>In <a href="https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/k8sutil/pod.go#L185"><code>pkg/operator/k8sutil/pod.go</code></a> line <code>185</code> disappeared from the final assembly but actually compiler emitted necessary logic but attributed assembly listing slightly differently which led <code>govanish</code> to think that this line actually disappeared.</p>
+          <p>In <a href="https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/k8sutil/pod.go#L185"><code class="inline">pkg/operator/k8sutil/pod.go</code></a> line <code class="inline">185</code> disappeared from the final assembly but actually compiler emitted necessary logic but attributed assembly listing slightly differently which led <code class="inline">govanish</code> to think that this line actually disappeared.</p>
           <pre class="language-go" style="counter-set: listing 180"><code><span class="keyword">func</span> <span class="function">GetMatchingContainer</span>(<span class="identifier">containers</span> []<span class="identifier">v1</span>.<span class="identifier">Container</span>, <span class="identifier">name</span> <span class="identifier">string</span>) (<span class="identifier">v1</span>.<span class="identifier">Container</span>, <span class="identifier">error</span>) {</code>
 <code>    <span class="keyword">var</span> <span class="identifier">result</span> *<span class="identifier">v1</span>.<span class="identifier">Container</span></code>
 <code>    <span class="keyword">if</span> <span class="function">len</span>(<span class="identifier">containers</span>) == <span class="number">1</span> {</code>
@@ -140,7 +144,7 @@ Conditions which uses functions with constant returns (e.g. <code>return nil</co
 </pre>
         </li>
         <li>
-          <p>In <a href="https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/discover/discover.go#L440-L444"><code>pkg/operator/discover/discover.go</code></a> file range between lines <code>440-444</code> were removed by Go and this is also a <strong><strong>bug</strong></strong> because this is an <code>else if</code> condition which comes after <code>else if len(filter) &gt;= 0</code> which is always true, making the subsequent <code>else if</code> condition redundant! (<em>here, <code>Goland</code> is silent and do not see any issue with the code</em>)</p>
+          <p>In <a href="https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/discover/discover.go#L440-L444"><code class="inline">pkg/operator/discover/discover.go</code></a> file range between lines <code class="inline">440-444</code> were removed by Go and this is also a <strong><strong>bug</strong></strong> because this is an <code class="inline">else if</code> condition which comes after <code class="inline">else if len(filter) &gt;= 0</code> which is always true, making the subsequent <code class="inline">else if</code> condition redundant! (<em>here, <code class="inline">Goland</code> is silent and do not see any issue with the code</em>)</p>
           <pre class="language-go" style="counter-set: listing 425"><code>} <span class="keyword">else</span> <span class="keyword">if</span> <span class="function">len</span>(<span class="identifier">filter</span>) >= <span class="number">0</span> {</code>
 <code>    <span class="keyword">for</span> <span class="identifier">i</span> := <span class="keyword">range</span> <span class="identifier">nodeDevices</span> {</code>
 <code>        <span class="comment">//TODO support filter based on other keys</span></code>
@@ -159,15 +163,15 @@ Conditions which uses functions with constant returns (e.g. <code>return nil</co
 </pre>
         </li>
         <li>
-          <p>In <a href="https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/test/client.go#L99"><code>pkg/operator/test/client.go</code></a> file cast check code were removed from the binary because compiler proved that failure condition can never happen. This is not a bug and pretty frequent false positive case for <code>govanish</code>.</p>
+          <p>In <a href="https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/test/client.go#L99"><code class="inline">pkg/operator/test/client.go</code></a> file cast check code were removed from the binary because compiler proved that failure condition can never happen. This is not a bug and pretty frequent false positive case for <code class="inline">govanish</code>.</p>
           <pre class="language-go" style="counter-set: listing 96"><code><span class="identifier">fd</span>, <span class="identifier">ok</span> := <span class="identifier">d</span>.(*<span class="identifier">fakediscovery</span>.<span class="identifier">FakeDiscovery</span>)</code>
 <code><span class="keyword">if</span> !<span class="identifier">ok</span> {</code>
 <code>    <span class="function">panic</span>(<span class="identifier">fmt</span>.<span class="function">Errorf</span>(<span class="string">"failed to get fake clientset's fake discovery"</span>))</code>
 <code>}</code>
 </pre>
+          <p>Overall, in the <code class="inline">rook</code> repository, <code class="inline">govanish</code> found two bugs with a 50% false positive rate &ndash; which is pretty cool! While the average false positive rate of the linter is higher, <code class="inline">govanish</code> has still proven to be useful and capable of finding bugs that other linters miss. Give it a try and see how much code <code class="inline">Go</code> removes without your approval!</p>
         </li>
       </ol>
-      <p>So overall, on the <code>rook</code> repository, <code>govanish</code> found 2 bugs with a 50% false positive rate &ndash; which is not that bad! Actually, on average, false positive rate of linter is higher &ndash; but it still can be useful!</p>
     </section>
 </div>
     <hr/>

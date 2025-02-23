@@ -1,13 +1,15 @@
 {date="2025/02/23"}
 # Go can remove code from the binary, and you may want to know that!
 
-One year ago I implemented a simple `Go` linter which leverages the power of the `Go` compiler to highlight potential bugs and it was able to find real issues in the software ([go-spacemesh](https://github.com/spacemeshos/go-spacemesh/pull/5873),[cloudflared](https://github.com/cloudflare/cloudflared/pull/1139),[wal-g](https://github.com/wal-g/wal-g/pull/1612),[ssh3](https://github.com/francoismichel/ssh3/pull/82),[answer](https://github.com/apache/answer/pull/1229),[pdfcpu](https://github.com/pdfcpu/pdfcpu/pull/762)).
+One year ago I implemented a simple `Go` linter which leverages the power of the `Go` compiler to highlight potential bugs and it was able to find real issues in the software ([go-spacemesh](https://github.com/spacemeshos/go-spacemesh/pull/5873), [cloudflared](https://github.com/cloudflare/cloudflared/pull/1139), [wal-g](https://github.com/wal-g/wal-g/pull/1612), [ssh3](https://github.com/francoismichel/ssh3/pull/82), [answer](https://github.com/apache/answer/pull/1229), [pdfcpu](https://github.com/pdfcpu/pdfcpu/pull/762)).
 
 The linter uses a quite interesting approach as it directly uses `Go` compiler output to find places of code which were removed by the compiler -- allowing it to detect non-trivial issues as long as the `Go` compiler can performs clever optimizations.
 
 So, let me tell a little story about linter development and meanwhile you can run it ([govanish](https://github.com/sivukhin/govanish)) on your project and check if your code vanished from the binary without your approval!
 
-_Note: the idea of using `Go` compiler output for a linter is not unique. I have seen another linter with similar approach that validates all functions marked with special comment will be inlined by the compiler -- but I can't find a proper reference to it right now_
+::: note
+The idea of using `Go` compiler output for a linter is not unique. I have seen another linter with similar approach that validates all functions marked with special comment will be inlined by the compiler -- but I can't find a proper reference to it right now.
+:::
 
 ## Beginning
 
@@ -34,7 +36,9 @@ func main() {
 
 Turns out that `alwaysNilInterface` always returns interface instance which has `nil` value but **non-`nil`** type information (because type is `*url.Error`) and this makes the value from this function unequal to a `nil` interface which has both type and value components set to `nil`!
 
-_(that's why you should always use `error` interface in Go instead of more specific types despite that in other languages you usually [{_return the most specific type, accept the most generic type_}](https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/))_
+::: note
+That's why you should always use `error` interface in Go instead of more specific types despite that in other languages you usually [{_return the most specific type, accept the most generic type_}](https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/))_
+:::
 
 ## Assembly
 
@@ -169,4 +173,4 @@ if !ok {
 }
  ```
 
-So overall, on the `rook` repository, `govanish` found 2 bugs with a 50% false positive rate -- which is not that bad! Actually, on average, false positive rate of linter is higher -- but it still can be useful!
+ Overall, in the `rook` repository, `govanish` found two bugs with a 50% false positive rate -- which is pretty cool! While the average false positive rate of the linter is higher, `govanish` has still proven to be useful and capable of finding bugs that other linters miss. Give it a try and see how much code `Go` removes without your approval!
