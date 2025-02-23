@@ -17,131 +17,125 @@
     <div class="article">
     <section id="Compression-kit">
       <a class="heading-anchor" href="#Compression-kit"><h1 date="2024/02/03" hide="true">Compression kit</h1>
-      </a></section>
-    <ul>
-      <li>
+      </a><ul>
+        <li>
 Varint encode example
-      </li>
-    </ul>
-    <pre class="language-ckit"><code><span class="identifier">zeros</span> = <span class="function">repeat</span>(<span class="identifier">bit</span>, <span class="number">0</span>)</code>
-<code><span class="comment">// we will generate two methods: varint_u32.encode and varint_u32.decode</span></code>
-<code><span class="keyword">fn</span> <span class="identifier">varint_u32</span>.<span class="function">encode</span>(<span class="identifier">x</span>: [<span class="number">32</span>]<span class="identifier">bit</span>) ~ <span class="identifier">varint_u32</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?: <span class="number">1.</span>.=<span class="number">5</span>]<span class="identifier">u8</span>) {</code>
-<code>    <span class="keyword">scan</span> <span class="identifier">x</span> ~ <span class="identifier">bytes</span> {</code>
-<code>        <span class="identifier">result</span>.<span class="function">push</span>(<span class="identifier">byte</span>) <span class="comment">// ~ byte = result.pop()</span></code>
-<code>        <span class="comment">// we can reconstruct computation because suffix is constant</span></code>
-<code>        <span class="keyword">if</span> <span class="identifier">x</span>[<span class="number">7.</span>.].<span class="function">prefix_of</span>(<span class="identifier">zeros</span>) ~ <span class="identifier">byte</span> & <span class="number">0x80</span> == <span class="number">0</span> {</code>
-<code>            <span class="identifier">byte</span> = <span class="identifier">x</span>.<span class="function">pop</span>(<span class="number">7</span>) <span class="comment">// ~ x.push(byte[0..7])</span></code>
-<code>            <span class="identifier">x</span>.<span class="function">pop</span>(<span class="number">0.</span>.)      <span class="comment">// ~ x.push(zeroes[0..]), instead of break explicitly skip rest of the x</span></code>
-<code>        } <span class="keyword">else</span> {</code>
-<code>            <span class="identifier">byte</span> = <span class="identifier">x</span>.<span class="function">pop</span>(<span class="number">7</span>) | <span class="number">0x80</span></code>
-<code>        }</code>
+        </li>
+      </ul>
+      <pre class="language-ckit"><code><span class="comment">// we will generate two methods: varint_u32.encode and varint_u32.decode</span></code>
+<code><span class="keyword">fn</span> <span class="identifier">varint_u32</span>.<span class="function">encode</span>(<span class="identifier">x</span>: <span class="identifier">u32</span>) ~ <span class="identifier">varint_u32</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?]<span class="identifier">u8</span>) {</code>
+<code>    <span class="identifier">bits</span> = <span class="identifier">x</span>.<span class="function">chunk</span>(<span class="number">1</span>) <span class="comment">// bits: Scannable[u1]</span></code>
+<code>    <span class="keyword">while</span> <span class="identifier">true</span> {</code>
+<code>        <span class="identifier">bits7</span> = <span class="identifier">bits</span>.<span class="identifier">pop</span><<span class="number">7</span>>()</code>
+<code>        <span class="identifier">all_zero</span> = <span class="identifier">bits</span>.<span class="function">are_all</span>(<span class="number">0</span>) <span class="comment">// bool == u1</span></code>
+<code>        <span class="comment">// no reassignment are allowed: `byte = byte | 0x01` is forbidden!</span></code>
+<code>        <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">1</span>>((!<span class="identifier">all_zero</span>) || <span class="identifier">bits7</span>) <span class="comment">// || / concat - reversible function which takes [n]u1, [m]u1 and produces [n+m]u1</span></code>
+<code></code>
+<code>        <span class="keyword">if</span> <span class="identifier">all_zero</span> { <span class="keyword">break</span> }</code>
 <code>    }</code>
 <code>}</code>
 </pre>
-    <ul>
-      <li>
+      <ul>
+        <li>
 Shrink encode example
-      </li>
-    </ul>
-    <pre class="language-ckit"><code><span class="identifier">zeros</span> = <span class="function">repeat</span>(<span class="identifier">bit</span>, <span class="number">0</span>)</code>
-<code><span class="keyword">fn</span> <span class="identifier">shrink_u32</span>.<span class="function">encode</span>(<span class="identifier">x</span>: [<span class="number">32</span>]<span class="identifier">bit</span>) ~ <span class="identifier">shrink_u32</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [<span class="identifier">n</span>: <span class="number">1.</span>.=<span class="number">5</span>]<span class="identifier">u8</span>) {</code>
-<code>    <span class="keyword">scan</span> <span class="identifier">x</span> ~ <span class="identifier">bytes</span> {</code>
-<code>        <span class="identifier">result</span>.<span class="function">push</span>(<span class="identifier">byte</span>) <span class="comment">// ~ byte = result.pop()</span></code>
-<code>        <span class="identifier">byte</span> = <span class="identifier">x</span>.<span class="function">pop</span>(<span class="number">8</span>)   <span class="comment">// ~ x.push(byte)</span></code>
-<code>        <span class="keyword">if</span> <span class="identifier">x</span>[<span class="number">0.</span>.].<span class="function">prefix_of</span>(<span class="identifier">zeros</span>) ~ <span class="identifier">result</span>.<span class="function">empty</span>() {</code>
-<code>            <span class="identifier">x</span>.<span class="function">pop</span>(<span class="number">0.</span>.) <span class="comment">// ~ x.push(zeroes[0..])</span></code>
+        </li>
+      </ul>
+      <pre class="language-ckit"><code><span class="comment">// (bytes: [n]u8) is a syntax sugar for (n: u32, bytes: [?]u8)</span></code>
+<code><span class="keyword">fn</span> <span class="identifier">shrink_u32</span>.<span class="function">encode</span>(<span class="identifier">x</span>: <span class="identifier">u32</span>) ~ <span class="identifier">shrink_u32</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [<span class="identifier">n</span>: <span class="number">1.</span>.=<span class="number">5</span>]<span class="identifier">u8</span>) {</code>
+<code>    <span class="identifier">bits</span> = <span class="identifier">x</span>.<span class="function">chunk</span>(<span class="number">1</span>)</code>
+<code>    <span class="keyword">while</span> <span class="identifier">true</span> {</code>
+<code>        <span class="identifier">bits8</span> = <span class="identifier">bits</span>.<span class="identifier">pop</span><<span class="number">8</span>>()</code>
+<code>        <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">1</span>>(<span class="identifier">bits8</span>)</code>
+<code>        <span class="keyword">if</span> <span class="identifier">bits</span>.<span class="function">are_all</span>(<span class="number">0</span>) {</code>
+<code>            <span class="keyword">break</span></code>
 <code>        }</code>
 <code>    }</code>
 <code>}</code>
 </pre>
-    <ul>
-      <li>
+      <ul>
+        <li>
 Length prefixing
-      </li>
-    </ul>
-    <pre class="language-ckit"><code><span class="keyword">fn</span> <span class="identifier">length_prefix</span>.<span class="function">encode</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>: <span class="number">0.</span>.<span class="number">1</span><<<span class="number">32</span>]<span class="identifier">u8</span>) ~ <span class="identifier">length_prefix</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?: <span class="identifier">n</span>+<span class="number">1.</span>.=<span class="identifier">n</span>+<span class="number">5</span>]<span class="identifier">u8</span>) {</code>
-<code>    <span class="identifier">bytes</span>.<span class="function">write</span>(<span class="identifier">varint_length</span>)    <span class="comment">// ~ 1. varint_length: [?]u8 = result.read()</span></code>
-<code>    <span class="identifier">varint_length</span> = <span class="function">varint_u32</span>(<span class="identifier">n</span>) <span class="comment">// ~ 2. n = varint_u32.decode(varint_length)</span></code>
-<code>    <span class="identifier">bytes</span>.<span class="function">write_fixed</span>(<span class="identifier">n</span>, <span class="identifier">b</span>)       <span class="comment">// ~ 3. b = result.read_fixed(n)</span></code>
+        </li>
+      </ul>
+      <pre class="language-ckit"><code><span class="keyword">fn</span> <span class="identifier">length_prefix</span>.<span class="function">encode</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>: <span class="identifier">u32</span>]<span class="identifier">u8</span>) ~ <span class="identifier">length_prefix</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?]<span class="identifier">u8</span>) {</code>
+<code>    <span class="identifier">varint_length</span> = <span class="identifier">varint_u32</span>.<span class="function">encode</span>(<span class="identifier">n</span>) <span class="comment">// ~ 2. n = varint_u32.decode(varint_length)</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">1</span>>(<span class="identifier">varint_length</span>)         <span class="comment">// ~ 1. varint_length: [?]u8 = result.pop<1>()</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="identifier">n</span>>(<span class="identifier">b</span>)                     <span class="comment">// ~ 3. b = result.pop<n>()</span></code>
 <code>}</code>
 </pre>
-    <ul>
-      <li>
+      <ul>
+        <li>
 Length prefixing with reverse
-      </li>
-    </ul>
-    <pre class="language-ckit"><code><span class="comment">// idempotent function: reverse(reverse(b)) == b</span></code>
+        </li>
+      </ul>
+      <pre class="language-ckit"><code><span class="comment">// idempotent function: reverse(reverse(b)) == b</span></code>
 <code><span class="keyword">extern</span> <span class="keyword">fn</span> <span class="function">reverse</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>]<span class="identifier">u8</span>) ~ <span class="function">reverse</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>]<span class="identifier">u8</span>);</code>
 <code></code>
-<code><span class="keyword">fn</span> <span class="identifier">length_prefix</span>.<span class="function">encode</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>: <span class="number">0.</span>.<span class="number">1</span><<<span class="number">32</span>]<span class="identifier">u8</span>) ~ <span class="identifier">length_prefix</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?: <span class="identifier">n</span>+<span class="number">1.</span>.=<span class="identifier">n</span>+<span class="number">5</span>]<span class="identifier">u8</span>) {</code>
-<code>    <span class="identifier">bytes</span>.<span class="function">write</span>(<span class="identifier">varint_length</span>)           <span class="comment">// ~ 1. varint_length: [?]u8 = result.read()</span></code>
-<code>    <span class="identifier">varint_length</span> = <span class="identifier">varint_u32</span>.<span class="function">encode</span>(<span class="identifier">n</span>) <span class="comment">// ~ 2. n = varint_u32.decode(varint_length)</span></code>
-<code>    <span class="identifier">bytes</span>.<span class="function">write_fixed</span>(<span class="identifier">n</span>, <span class="identifier">reversed</span>)       <span class="comment">// ~ 3. reversed = result.read_fixed(n)</span></code>
+<code><span class="keyword">fn</span> <span class="identifier">length_prefix</span>.<span class="function">encode</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>: <span class="identifier">u32</span>]<span class="identifier">u8</span>) ~ <span class="identifier">length_prefix</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?]<span class="identifier">u8</span>) {</code>
 <code>    <span class="identifier">reversed</span> = <span class="function">reverse</span>(<span class="identifier">b</span>)                <span class="comment">// ~ 4. b = reverse(reversed)</span></code>
-<code>}</code>
-<code></code>
-<code><span class="keyword">fn</span> <span class="identifier">length_prefix</span>.<span class="function">encode</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>: <span class="number">0.</span>.<span class="number">1</span><<<span class="number">32</span>]<span class="identifier">u8</span>) ~ <span class="identifier">length_prefix</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?: <span class="identifier">n</span>+<span class="number">1.</span>.=<span class="identifier">n</span>+<span class="number">5</span>]<span class="identifier">u8</span>) {</code>
 <code>    <span class="identifier">varint_length</span> = <span class="identifier">varint_u32</span>.<span class="function">encode</span>(<span class="identifier">n</span>) <span class="comment">// ~ 2. n = varint_u32.decode(varint_length)</span></code>
-<code>    <span class="identifier">bytes</span>.<span class="function">write</span>(<span class="identifier">varint_length</span>)           <span class="comment">// ~ 1. varint_length: [?]u8 = result.read()</span></code>
-<code>    <span class="identifier">reversed</span> = <span class="function">reverse</span>(<span class="identifier">b</span>)                <span class="comment">// ~ 4. b = reverse(reversed)</span></code>
-<code>    <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="identifier">n</span>>(<span class="identifier">reversed</span>)       <span class="comment">// ~ 3. reversed = result.read_fixed< n >()</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">1</span>>(<span class="identifier">varint_length</span>)         <span class="comment">// ~ 1. varint_length: [?]u8 = result.pop<1>()</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="identifier">n</span>>(<span class="identifier">reversed</span>)              <span class="comment">// ~ 3. reversed = result.pop<n>()</span></code>
 <code>}</code>
 </pre>
-    <ul>
-      <li>
+      <ul>
+        <li>
 Syntax for state definition
-      </li>
-    </ul>
-    <pre class="language-ckit"><code><span class="keyword">forward</span> <span class="keyword">state</span> [?]<span class="identifier">T</span> {</code>
-<code>    <span class="keyword">mut</span> <span class="function">push</span>(<span class="identifier">x</span>: <span class="identifier">T</span>) ~ <span class="function">pop</span>() <span class="comment">// dual method - we must call pop for every push in forward order</span></code>
-<code>    <span class="keyword">mut</span> <span class="function">write</span>(<span class="identifier">x</span>: [?]<span class="identifier">T</span>) ~ <span class="function">read</span>()</code>
-<code>    <span class="keyword">mut</span><<span class="identifier">n</span>: <span class="number">0.</span>.<span class="number">1</span><<<span class="number">32</span>> <span class="function">write_fixed</span>(<span class="identifier">x</span>: [<span class="identifier">n</span>]<span class="identifier">T</span>) ~ <span class="function">read_fixed</span>()</code>
+        </li>
+      </ul>
+      <pre class="language-ckit"><code><span class="keyword">forward</span> <span class="keyword">state</span> [?]<span class="identifier">T</span> {</code>
+<code>    <span class="comment">// dual method - we must call pop for every push in forward order</span></code>
+<code>    <span class="comment">// template parameter <n: u32> is the external information which is common for both methods</span></code>
+<code>    <span class="keyword">mut</span><<span class="identifier">n</span>: <span class="identifier">u32</span>> <span class="function">push</span>(<span class="identifier">x</span>: [<span class="identifier">n</span>]<span class="identifier">T</span>) ~ <span class="function">pop</span>()</code>
 <code>}</code>
 <code></code>
 <code><span class="keyword">forward</span> <span class="keyword">state</span> <span class="identifier">BlocksLru</span> {</code>
+<code>    <span class="identifier">init</span><<span class="identifier">size</span>: <span class="identifier">u32</span>> <span class="keyword">forward</span>() ~ <span class="keyword">backward</span>()</code>
+<code></code>
 <code>    <span class="keyword">mut</span> <span class="function">encode</span>(<span class="identifier">offset</span>: <span class="identifier">u32</span>) ~ <span class="function">decode</span>(<span class="identifier">encoded</span>: <span class="identifier">u32</span>)</code>
-<code>    <span class="keyword">mut</span> <span class="function">touch</span>(<span class="identifier">offset</span>: <span class="identifier">u32</span>): <span class="identifier">void</span> <span class="comment">// no dual method - we must call touch with same argument in dual method</span></code>
+<code>    <span class="keyword">mut</span> <span class="function">touch</span>(<span class="identifier">offset</span>: <span class="identifier">u32</span>) ~ <span class="function">touch</span>(<span class="identifier">offset</span>: <span class="identifier">u32</span>) <span class="comment">// same dual method - we must call touch with same argument in dual method</span></code>
 <code>}</code>
 <code></code>
 <code><span class="keyword">forward</span> <span class="keyword">state</span> <span class="identifier">FwdBitStream</span> {</code>
-<code>    <span class="keyword">mut</span> <span class="function">init</span>(): <span class="identifier">void</span></code>
-<code>    <span class="keyword">mut</span> <span class="function">flush</span>(): <span class="identifier">void</span></code>
-<code>    <span class="keyword">mut</span> <span class="function">close</span>(): <span class="identifier">void</span></code>
-<code>    <span class="keyword">mut</span><<span class="identifier">n</span>: <span class="number">0.</span>.=<span class="number">64</span>> <span class="function">push</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>]<span class="identifier">bits</span>) ~ <span class="function">pop</span>()</code>
+<code>    <span class="identifier">init</span> <span class="keyword">forward</span>() ~ <span class="keyword">backward</span>()</code>
+<code></code>
+<code>    <span class="keyword">mut</span> <span class="function">flush</span>() ~ <span class="function">flush</span>()</code>
+<code>    <span class="keyword">mut</span><<span class="identifier">n</span>: <span class="number">0.</span>.=<span class="number">64</span>> <span class="function">push</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>]<span class="identifier">u1</span>) ~ <span class="function">pop</span>()</code>
 <code>}</code>
 <code></code>
 <code><span class="comment">// for backward state we must generate dual operations in reverse order</span></code>
 <code><span class="keyword">backward</span> <span class="keyword">state</span> <span class="identifier">BwdBitStream</span> {</code>
-<code>    <span class="keyword">mut</span> <span class="function">init_write</span>() ~ <span class="function">close_read</span>()</code>
+<code>    <span class="identifier">init</span> () ~ ()</code>
+<code>    <span class="identifier">deinit</span> () ~ ()</code>
+<code></code>
 <code>    <span class="keyword">mut</span> <span class="function">flush</span>() ~ <span class="function">reload</span>()</code>
-<code>    <span class="keyword">mut</span> <span class="function">close_write</span>() ~ <span class="function">init_read</span>()</code>
-<code>    <span class="keyword">mut</span><<span class="identifier">n</span>: <span class="number">0.</span>.=<span class="number">64</span>> <span class="function">push</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>]<span class="identifier">bits</span>) ~ <span class="function">pop</span>()</code>
+<code>    <span class="keyword">mut</span><<span class="identifier">n</span>: <span class="number">0.</span>.=<span class="number">64</span>> <span class="function">push</span>(<span class="identifier">b</span>: [<span class="identifier">n</span>]<span class="identifier">u1</span>) ~ <span class="function">pop</span>()</code>
 <code>}</code>
 <code></code>
 <code><span class="comment">// must not compile because we .decode can't be implemented</span></code>
 <code><span class="keyword">fn</span> <span class="identifier">invalid</span>.<span class="function">encode</span>(<span class="identifier">x</span>: <span class="identifier">u32</span>) ~ <span class="identifier">invalid</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?]<span class="identifier">u32</span>) {</code>
-<code>    <span class="keyword">var</span> ( <span class="identifier">blocks</span>: <span class="identifier">BlocksLru</span> )</code>
+<code>    <span class="identifier">blocks</span> = <span class="identifier">BlocksLru</span>.<span class="keyword">forward</span>(<span class="number">1024</span>)</code>
 <code>    <span class="identifier">y</span> = <span class="identifier">blocks</span>.<span class="function">encode</span>(<span class="identifier">x</span>) <span class="comment">// 2. ~ x = blocks_lru.decode(y) !!! y is unknown here but we can't violate state operations order</span></code>
 <code>    <span class="identifier">z</span> = <span class="identifier">blocks</span>.<span class="function">encode</span>(<span class="identifier">y</span>) <span class="comment">// 3. ~ y = blocks_lru.decode(z)</span></code>
 <code>    <span class="identifier">bytes</span>.<span class="function">push</span>(<span class="identifier">z</span>)        <span class="comment">// 1. ~ z = result.pop()</span></code>
 <code>}</code>
 </pre>
-    <ul>
-      <li>
-        <a href="https://qoiformat.org/">QOI</a>
-      </li>
-    </ul>
-    <pre class="language-ckit"><code><span class="keyword">const</span> <span class="identifier">RGBA</span> = <span class="keyword">struct</span> {</code>
-<code>    <span class="identifier">r</span>: <span class="number">0.</span>.<span class="number">256</span>,</code>
-<code>    <span class="identifier">g</span>: <span class="number">0.</span>.<span class="number">256</span>,</code>
-<code>    <span class="identifier">b</span>: <span class="number">0.</span>.<span class="number">256</span>,</code>
-<code>    <span class="identifier">a</span>: <span class="number">0.</span>.<span class="number">256</span>,</code>
+      <ul>
+        <li>
+          <a href="https://qoiformat.org/">QOI</a>
+        </li>
+      </ul>
+      <pre class="language-ckit"><code><span class="keyword">const</span> <span class="identifier">RGBA</span> = <span class="keyword">struct</span> {</code>
+<code>    <span class="identifier">r</span>: <span class="identifier">u8</span>,</code>
+<code>    <span class="identifier">g</span>: <span class="identifier">u8</span>,</code>
+<code>    <span class="identifier">b</span>: <span class="identifier">u8</span>,</code>
+<code>    <span class="identifier">a</span>: <span class="identifier">u8</span>,</code>
 <code>}</code>
 <code></code>
 <code><span class="keyword">const</span> <span class="identifier">Header</span> {</code>
 <code>    <span class="identifier">magic</span>: <span class="string">"qoif"</span></code>
-<code>    <span class="identifier">width</span>: <span class="number">0.</span>.<span class="number">1</span><<<span class="number">32</span></code>
-<code>    <span class="identifier">height</span>: <span class="number">0.</span>.<span class="number">1</span><<<span class="number">32</span></code>
+<code>    <span class="identifier">width</span>: <span class="identifier">u32</span></code>
+<code>    <span class="identifier">height</span>: <span class="identifier">u32</span></code>
 <code>    <span class="identifier">channels</span>: {<span class="number">3</span>, <span class="number">4</span>}</code>
 <code>    <span class="identifier">colorspace</span>: {<span class="number">0</span>, <span class="number">1</span>}</code>
 <code>}</code>
@@ -152,50 +146,46 @@ Syntax for state definition
 <code>    <span class="identifier">QOI_OP_INDEX</span> = <span class="keyword">struct</span> { <span class="identifier">index</span>: <span class="number">0.</span>.<span class="number">64</span> },</code>
 <code>    <span class="identifier">QOI_OP_DIFF</span>  = <span class="keyword">struct</span> { <span class="identifier">dr</span>: <span class="number">-2.</span>.<span class="number">2</span>, <span class="identifier">dg</span>: <span class="number">-2.</span>.<span class="number">2</span>, <span class="identifier">db</span>: <span class="number">-2.</span>.<span class="number">2</span> },</code>
 <code>    <span class="identifier">QOI_OP_LUMA</span>  = <span class="keyword">struct</span> { <span class="identifier">dr</span>: <span class="number">-32.</span>.<span class="number">32</span>, <span class="identifier">dr_dg</span>: <span class="number">-8.</span>.<span class="number">8</span>, <span class="identifier">db_dg</span>: <span class="number">-8.</span>.<span class="number">8</span> },</code>
-<code>    <span class="identifier">QOI_OP_RUN</span>   = <span class="keyword">struct</span> { <span class="identifier">run</span>: <span class="number">0.</span>.<span class="number">64</span> },</code>
+<code>    <span class="identifier">QOI_OP_RUN</span>   = <span class="keyword">struct</span> { <span class="identifier">run</span>: <span class="number">0.</span>.<span class="number">62</span> },</code>
 <code>}</code>
 <code></code>
 <code><span class="keyword">fn</span> <span class="identifier">qoi</span>.<span class="function">encode</span>({ <span class="identifier">header</span>: <span class="identifier">Header</span>, <span class="identifier">operations</span>: [<span class="identifier">n</span>]<span class="identifier">Operation</span> }) ~ <span class="identifier">qoi</span>.<span class="function">decode</span>(<span class="identifier">bytes</span>: [?]<span class="identifier">u8</span>) {</code>
-<code>    <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">4</span>>(<span class="string">"qoif"</span>)            <span class="comment">// 1. ~ assert!(bytes.read_fixed<4>() == "qoif")</span></code>
-<code>    <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">4</span>>(<span class="identifier">header</span>.<span class="identifier">width</span>)      <span class="comment">// 2. ~ header.width = bytes.read_fixed<4>()</span></code>
-<code>    <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">4</span>>(<span class="identifier">header</span>.<span class="identifier">height</span>)     <span class="comment">// 3. ~ header.height = bytes.read_fixed<4>()</span></code>
-<code>    <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">4</span>>(<span class="identifier">header</span>.<span class="identifier">channels</span>)   <span class="comment">// 4. ~ header.channels = bytes.read_fixed<4>()</span></code>
-<code>    <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">4</span>>(<span class="identifier">header</span>.<span class="identifier">colorspace</span>) <span class="comment">// 5. ~ header.colorspace = bytes.read_fixed<4>()</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">4</span>>(<span class="string">"qoif"</span>)            <span class="comment">// 1. ~ assert!(bytes.pop<4>() == "qoif")</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">4</span>>(<span class="identifier">header</span>.<span class="identifier">width</span>)      <span class="comment">// 2. ~ header.width = bytes.pop<4>()</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">4</span>>(<span class="identifier">header</span>.<span class="identifier">height</span>)     <span class="comment">// 3. ~ header.height = bytes.pop<4>()</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">4</span>>(<span class="identifier">header</span>.<span class="identifier">channels</span>)   <span class="comment">// 4. ~ header.channels = bytes.pop<4>()</span></code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">4</span>>(<span class="identifier">header</span>.<span class="identifier">colorspace</span>) <span class="comment">// 5. ~ header.colorspace = bytes.pop<4>()</span></code>
 <code></code>
-<code>    ~ <span class="identifier">size</span> = <span class="identifier">header</span>.<span class="identifier">width</span> * <span class="identifier">header</span>.<span class="identifier">height</span> <span class="comment">// initialize counter only for .decode method</span></code>
-<code>    <span class="keyword">scan</span> <span class="identifier">operations</span> ~ <span class="identifier">bytes</span> {</code>
-<code>        <span class="identifier">current</span> = <span class="identifier">operations</span>.<span class="function">pop</span>()</code>
-<code>        <span class="keyword">match</span> <span class="identifier">current</span> {</code>
-<code>            .<span class="identifier">QOI_OP_RGB</span> ~ <span class="identifier">bytes</span>[<span class="number">0</span>] == <span class="number">0b11111110</span> {</code>
-<code>                <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">4</span>>([<span class="number">0b11111110</span>, <span class="identifier">current</span>.<span class="identifier">r</span>, <span class="identifier">current</span>.<span class="identifier">g</span>, <span class="identifier">current</span>.<span class="identifier">b</span>])</code>
-<code>                ~ <span class="identifier">size</span> -= <span class="number">1</span></code>
-<code>            }</code>
-<code>            .<span class="identifier">QOI_OP_RGBA</span> ~ <span class="identifier">bytes</span>[<span class="number">0</span>] == <span class="number">0b11111111</span> {</code>
-<code>                <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">5</span>>([<span class="number">0b11111111</span>, <span class="identifier">current</span>.<span class="identifier">r</span>, <span class="identifier">current</span>.<span class="identifier">g</span>, <span class="identifier">current</span>.<span class="identifier">b</span>, <span class="identifier">current</span>.<span class="identifier">a</span>])</code>
-<code>                ~ <span class="identifier">size</span> -= <span class="number">1</span></code>
-<code>            }</code>
-<code>            .<span class="identifier">QOI_OP_INDEX</span> ~ <span class="identifier">bytes</span>[<span class="number">0</span>][<span class="number">0.</span>.<span class="number">2</span>] == <span class="number">0b00</span> {</code>
-<code>                <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">1</span>>([<span class="number">0b00</span> || <span class="identifier">current</span>.<span class="identifier">index</span>])</code>
-<code>                ~ <span class="identifier">size</span> -= <span class="number">1</span></code>
-<code>            }</code>
-<code>            .<span class="identifier">QOI_OP_DIFF</span> ~ <span class="identifier">bytes</span>[<span class="number">0</span>][<span class="number">0.</span>.<span class="number">2</span>] == <span class="number">0b01</span> {</code>
-<code>                <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">1</span>>([<span class="number">0b01</span> || <span class="identifier">current</span>.<span class="identifier">dr</span> + <span class="number">2</span> || <span class="identifier">current</span>.<span class="identifier">dg</span> + <span class="number">2</span> || <span class="identifier">current</span>.<span class="identifier">db</span> + <span class="number">2</span>])</code>
-<code>                ~ <span class="identifier">size</span> -= <span class="number">1</span></code>
-<code>            }</code>
-<code>            .<span class="identifier">QOI_OP_LUMA</span> ~ <span class="identifier">bytes</span>[<span class="number">0</span>][<span class="number">0.</span>.<span class="number">2</span>] == <span class="number">0b10</span> {</code>
-<code>                <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">2</span>>([<span class="number">0b10</span> || <span class="identifier">current</span>.<span class="identifier">dg</span> + <span class="number">32</span>, <span class="identifier">current</span>.<span class="identifier">dr_dg</span> + <span class="number">8</span> || <span class="identifier">current</span>.<span class="identifier">db_dg</span> + <span class="number">8</span>])</code>
-<code>                ~ <span class="identifier">size</span> -= <span class="number">1</span></code>
-<code>            }</code>
-<code>            .<span class="identifier">QOI_OP_RUN</span> ~ <span class="identifier">bytes</span>[<span class="number">0</span>][<span class="number">0.</span>.<span class="number">2</span>] == <span class="number">0b11</span> {</code>
-<code>                <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">1</span>>([<span class="number">0b11</span> || <span class="identifier">current</span>.<span class="identifier">run</span>])</code>
-<code>                ~ <span class="identifier">size</span> -= <span class="identifier">current</span>.<span class="identifier">run</span></code>
-<code>            }</code>
-<code>        }</code>
-<code>        <span class="keyword">if</span> ~ <span class="identifier">size</span> == <span class="number">0</span> {</code>
-<code>            <span class="keyword">break</span></code>
+<code>    <span class="identifier">size</span> = <span class="identifier">header</span>.<span class="identifier">width</span> * <span class="identifier">header</span>.<span class="identifier">height</span></code>
+<code>    <span class="keyword">while</span> <span class="identifier">size</span> > <span class="number">0</span> {</code>
+<code>        <span class="identifier">operation</span> = <span class="identifier">operations</span>.<span class="function">pop</span>()</code>
+<code>        <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">1</span>>(<span class="identifier">tag_payload</span>)</code>
+<code>        <span class="keyword">if</span> <span class="identifier">operation</span> == .<span class="identifier">QOI_OP_RGB</span> {</code>
+<code>            <span class="identifier">tag_payload</span> = <span class="number">0b11111110</span></code>
+<code>            <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">3</span>>([<span class="identifier">operation</span>.<span class="identifier">r</span>, <span class="identifier">operation</span>.<span class="identifier">g</span>, <span class="identifier">operation</span>.<span class="identifier">b</span>])</code>
+<code>            <span class="identifier">size</span> -= <span class="number">1</span></code>
+<code>        } <span class="keyword">else</span> <span class="keyword">if</span> <span class="identifier">operation</span> == .<span class="identifier">QOI_OP_RGBA</span> {</code>
+<code>            <span class="identifier">tag_payload</span> = <span class="number">0b11111111</span></code>
+<code>            <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">4</span>>([<span class="identifier">operation</span>.<span class="identifier">r</span>, <span class="identifier">operation</span>.<span class="identifier">g</span>, <span class="identifier">operation</span>.<span class="identifier">b</span>, <span class="identifier">operation</span>.<span class="identifier">a</span>])</code>
+<code>            <span class="identifier">size</span> -= <span class="number">1</span></code>
+<code>        } <span class="keyword">else</span> <span class="keyword">if</span> <span class="identifier">operation</span> == .<span class="identifier">QOI_OP_INDEX</span> {</code>
+<code>            <span class="identifier">tag_payload</span> = <span class="number">0b00</span> || <span class="identifier">operation</span>.<span class="identifier">index</span></code>
+<code>            <span class="identifier">size</span> -= <span class="number">1</span></code>
+<code>        } <span class="keyword">else</span> <span class="keyword">if</span> <span class="identifier">operation</span> == .<span class="identifier">QOI_OP_DIFF</span> {</code>
+<code>            <span class="identifier">tag_payload</span> = <span class="number">0b01</span> || <span class="identifier">operation</span>.<span class="identifier">dr</span> + <span class="number">2</span> || <span class="identifier">operation</span>.<span class="identifier">dg</span> + <span class="number">2</span> || <span class="identifier">operation</span>.<span class="identifier">db</span> + <span class="number">2</span></code>
+<code>            <span class="identifier">size</span> -= <span class="number">1</span></code>
+<code>        } <span class="keyword">else</span> <span class="keyword">if</span> <span class="identifier">operation</span> == .<span class="identifier">QOI_OP_LUMA</span> {</code>
+<code>            <span class="identifier">tag_payload</span> = <span class="number">0b10</span> || <span class="identifier">operation</span>.<span class="identifier">dg</span> + <span class="number">32</span></code>
+<code>            <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">1</span>>([<span class="identifier">operation</span>.<span class="identifier">dr_dg</span> + <span class="number">8</span> || <span class="identifier">operation</span>.<span class="identifier">db_dg</span> + <span class="number">8</span>])</code>
+<code>            <span class="identifier">size</span> -= <span class="number">1</span></code>
+<code>        } <span class="keyword">else</span> <span class="keyword">if</span> <span class="identifier">operation</span> == .<span class="identifier">QOI_OP_RUN</span> {</code>
+<code>            <span class="identifier">tag_payload</span> = <span class="number">0b11</span> || <span class="identifier">operation</span>.<span class="identifier">run</span></code>
+<code>            <span class="identifier">size</span> -= <span class="identifier">operation</span>.<span class="identifier">run</span></code>
+<code>        } <span class="keyword">else</span> {</code>
+<code>            <span class="function">panic</span>(<span class="string">"unexpected operation type"</span>)</code>
 <code>        }</code>
 <code>    }</code>
-<code>    <span class="identifier">bytes</span>.<span class="identifier">write_fixed</span><<span class="number">8</span>>([<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>])</code>
+<code>    <span class="identifier">bytes</span>.<span class="identifier">push</span><<span class="number">8</span>>([<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>])</code>
 <code>}</code>
 <code></code>
 <code><span class="keyword">forward</span> <span class="keyword">state</span> <span class="identifier">qoi</span>.<span class="identifier">Recent</span> {</code>
@@ -210,6 +200,7 @@ Syntax for state definition
 <code>    }</code>
 <code>}</code>
 </pre>
+    </section>
 </div>
     <hr/>
     <div class="footer">

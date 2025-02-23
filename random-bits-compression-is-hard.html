@@ -26,13 +26,12 @@
       <p>In theory, for such simple generation procedure <code>8*count * (p*log(1/p) + q*log(1/q)), q=1-p</code> bits is necessary and enough to encode byte sequence.</p>
       <p>Let&rsquo;s look how well <code>zstd</code> can cope with this data:</p>
       <p><figure><img style="width: min(800px, 100%)" alt="graph depicts zstd compression overhead compared to the theoretical lower bound in percents on 1MB files" src="./random-compression/zstd_delta.png"><figcaption>graph depicts zstd compression overhead compared to the theoretical lower bound in percents on 1MB files</figcaption></figure></p>
-        <p>Overall, <code>zstd</code> managed to reach compression size almost equal to the theoretical lower bound (which is not surprising, actually) for <code>0.25 <= p <= 0.75</code>. Probability values outside of this range corresponds to very specific data which we rarely see in the real life. But still, this is interesting to understand, whats happening on this graph.</p>
-      </section>
-      <ol>
-        <li>
-          <p>We can see spike around the values <code>p=0.425</code> when <code>zstd</code> refuses to compress data at all and just leave our binary file as-is. This behaviour is consistent for all levels except 18 and 19 (and also all <code>--ultra</code> levels 20-22) which actually managed to capture dependencies even in this almost random binary file.</p>
-          <p>If we will open <code>zstd</code> codebase we can find file <a href="https://github.com/facebook/zstd/blob/dev/lib/compress/clevels.h">clevels.h</a> which defines crucial parameters for compressor for different levels and input file sizes. We can see that levels 17 and 18 differs in <code>searchLog</code>, <code>minMatch</code> and <code>strategy</code> parameters where <strong><code>strategy</code></strong> mismatch play crucial role:</p>
-          <pre class="language-c"><code><span class="keyword">typedef</span> <span class="keyword">struct</span> {</code>
+        <p>Overall, <code>zstd</code> managed to reach compression size almost equal to the theoretical lower bound (which is not surprising, actually) for <code>0.25 &lt;= p &lt;= 0.75</code>. Probability values outside of this range corresponds to very specific data which we rarely see in the real life. But still, this is interesting to understand, whats happening on this graph.</p>
+        <ol>
+          <li>
+            <p>We can see spike around the values <code>p=0.425</code> when <code>zstd</code> refuses to compress data at all and just leave our binary file as-is. This behaviour is consistent for all levels except 18 and 19 (and also all <code>--ultra</code> levels 20-22) which actually managed to capture dependencies even in this almost random binary file.</p>
+            <p>If we will open <code>zstd</code> codebase we can find file <a href="https://github.com/facebook/zstd/blob/dev/lib/compress/clevels.h">clevels.h</a> which defines crucial parameters for compressor for different levels and input file sizes. We can see that levels 17 and 18 differs in <code>searchLog</code>, <code>minMatch</code> and <code>strategy</code> parameters where <strong><code>strategy</code></strong> mismatch play crucial role:</p>
+            <pre class="language-c"><code><span class="keyword">typedef</span> <span class="keyword">struct</span> {</code>
 <code>    <span class="keyword">unsigned</span> <span class="identifier">windowLog</span>;       <span class="comment">/**< largest match distance : larger == more compression, more memory needed during decompression */</span></code>
 <code>    <span class="keyword">unsigned</span> <span class="identifier">chainLog</span>;        <span class="comment">/**< fully searched segment : larger == more compression, slower, more memory (useless for fast) */</span></code>
 <code>    <span class="keyword">unsigned</span> <span class="identifier">hashLog</span>;         <span class="comment">/**< dispatch table : larger == faster, more memory */</span></code>
@@ -55,8 +54,9 @@
 <code>    {   <span class="comment">/* for srcSize <= 16 KB */</span>  ... }</code>
 <code>};</code>
 </pre>
-        </li>
-      </ol>
+          </li>
+        </ol>
+      </section>
 </div>
     <hr/>
     <div class="footer">

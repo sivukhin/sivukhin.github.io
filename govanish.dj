@@ -13,7 +13,7 @@ _Note: the idea of using `Go` compiler output for a linter is not unique. I have
 
 Everything started with me playing around with `Go` and suddenly discovering tricky nuance of how `Go` interfaces are working.
 
-Internally, every interface instance has two components: one which represent the underlying concrete **type** of the instance and another which represent the real **value** of the instance. While this is not a surprise, turned out that in order for interfaces to be considered equal `Go` compiler checks **both** components for equality. This behavior starting to play weirdly when you operate with `nil` values and `nil` interfaces (more detailed explanation can be found [here](https://trstringer.com/go-nil-interface-and-interface-with-nil-concrete-value/)).
+Internally, every interface instance has two components: one that represents the underlying concrete **type** of the instance and another that represents the actual **value** of the instance. While this is not a surprise, it turns out that for interfaces to be considered equal, the `Go` compiler checks **both** components for equality. This behavior starting to play weirdly when you operate with `nil` values and `nil` interfaces (more detailed explanation can be found [here](https://trstringer.com/go-nil-interface-and-interface-with-nil-concrete-value/)).
 
 Look at the following code snippet:
 
@@ -32,13 +32,13 @@ func main() {
 }
 ```
 
-Turns out that `alwaysNilInterface` always returns interface instance which has `nil` value but **non-`nil`** type information (because type is `*url.Error`) and this make the value from this function unequal from `nil` interface which has both type and value components equal to `nil`!
+Turns out that `alwaysNilInterface` always returns interface instance which has `nil` value but **non-`nil`** type information (because type is `*url.Error`) and this makes the value from this function unequal to a `nil` interface which has both type and value components set to `nil`!
 
 _(that's why you should always use `error` interface in Go instead of more specific types despite that in other languages you usually [{_return the most specific type, accept the most generic type_}](https://enterprisecraftsmanship.com/posts/return-the-most-specific-type/))_
 
 ## Assembly
 
-After discovering this nuance I was wondering how interface comparison works and this forces me to look at the generated assembly for the snippet above (_by the way, Golang uses [Plan9](https://go.dev/doc/asm) assembler syntax which is annoying sometimes as it's very hard to find description of instructions_). Luckily, Go provides an easy way to inspect generated assembler code: we can just pass `-gcflags=-S` argument to the `go build` command. The output of the compiler looks like following:
+After discovering this nuance, I wondered how interface comparison works, which led me to examine the generated assembly for the snippet above (_by the way, Golang uses [Plan9](https://go.dev/doc/asm) assembler syntax which is annoying sometimes as it's very hard to find description of instructions_). Luckily, Go provides an easy way to inspect the generated assembler code: we can just pass `-gcflags=-S` argument to the `go build` command. The output of the compiler looks like following:
 
 ```asm
 # command-line-arguments
@@ -54,7 +54,7 @@ main.main STEXT nosplit size=1 args=0x0 locals=0x0 funcid=0x0 align=0x0
 ...
 ```
 
-That's interesting, because compiler completely removed conditional code from the `main` function body and just generates "no-op" executable. This is kind of expected behaviour: optimizing compiler should simplify code and remove "useless" operations -- that's why we love them. But from the developer perspective it's actually bit suspicious, because removal of the code from the binary is a sign that maybe something unexpected happened: we wrote code `err == nil` condition on purpose and it's shouldn't result in constant result independent of the function inputs.
+That's interesting, because compiler completely removed conditional code from the `main` function body and just generates "no-op" executable. This is kind of expected behaviour: optimizing compiler should simplify code and remove "useless" operations -- that's why we love them. But from the developer perspective it's actually bit suspicious, because the removal of code from the binary may indicate that something unexpected has happened: we wrote code `err == nil` condition on purpose and it's shouldn't result in constant result independent of the function inputs.
 
 There is another interesting bit in the generated assembly -- you can notice that every instruction annotated with the line of code which "produced" the sequence of assembler operations. That's cool! Let's look at which lines are actually in use in the final assembler code based on the compiler output:
 
@@ -68,11 +68,13 @@ main.go:12
 
 We can see that line 10 is missing in the output which is the hint that compiler completely removed logic from this line in the final assembly.
 
-That's actually nice! So, what if we will try to utilize this combination of compiler output introspection and the fact that sometimes compiler can delete parts of the code which we definitely wanted to see in the binary in some form? Can we create a linter out from that idea which will allow us to find non-trivial bugs in the go code? How noisy this linter will be? Let's find out!
+That's actually nice! So, what if we try to utilize this combination of compiler output introspection and the fact that sometimes compiler can delete parts of the code which we definitely wanted to see in the binary in some form? Can we create a linter out from that idea which will allow us to find non-trivial bugs in the go code? How noisy this linter will be? Let's find out!
 
 ## Govanish
 
-So, that's how [govanish](https://github.com/sivukhin/govanish) linter actually works! It build your project with `gcflags=-S` option and analyze which lines of code are missed from the generated assembly. Not surprisingly, on a big projects linter is pretty noisy, that's why few heuristics were implemented to ignore from analysis few common cases when `Go` compiler remove or replace chunk of code logic in the final assembler listing:
+So, that's how [govanish](https://github.com/sivukhin/govanish) linter actually works!
+
+It builds your project with the `gcflags=-S` option and analyzes which lines of code are missed from the generated assembly. Not surprisingly, on a big projects linter is pretty noisy, that's why few heuristics were implemented to ignore from analysis few common cases when `Go` compiler remove or replace chunk of code logic in the final assembler listing:
 
 - Code like `for k := range m { delete(m, k) }` is not analyzed because `Go` compiler is clever enough to use `runtime.mapclear()` function in this case
 - Constant `true`/`false` conditions are not analyzed, because they are usually written for local debugging and intent is clear that the code should be removed by compiler
@@ -80,11 +82,11 @@ So, that's how [govanish](https://github.com/sivukhin/govanish) linter actually 
 - Platform dependent code is not analyzed, because it will always trigger `govanish` on a wrong platform
 - Conditions which uses functions with constant returns (e.g. `return nil`) are not analyzed if function is defined in the module
 
-Still, even with these heuristics in place, `govanish` still produce a lot of false positives especially around error checking code, because a lot of Go functions follow generic approach to return an error while actually they are never failing (e.g. `func (b *strings.Builder) Write(p []byte) (int, error)`). But on the other hand I find it fun to run `govanish` from time to time on popular projects and discover some bugs with it.
+Still, even with these heuristics in place, `govanish` produces a lot of false positives especially around error checking code, because a lot of Go functions follow generic approach to return an error while actually they are never failing (e.g. `func (b *strings.Builder) Write(p []byte) (int, error)`). But on the other hand I find it fun to run `govanish` from time to time on popular projects and discover some bugs with it.
 
 ## Govanish in action
 
-Let's see `govanish` in action on some real project -- I decided to pick [rook](https://github.com/rook/rook/tree/master) repository (there is an obviously an element of cherry-picking as I ran `govanish` on a several projects before `rook` and detected no real issues there).
+Let's see `govanish` in action on some real project -- I decided to pick the [rook](https://github.com/rook/rook/tree/master) repository (there is an obviously an element of cherry-picking as I ran `govanish` on a several projects before `rook` and detected no real issues there).
 
 So, you can clone the repository, install `govanish` and run it:
 
@@ -123,9 +125,9 @@ func GetRunningPod(ctx context.Context, clientset kubernetes.Interface) (*v1.Pod
     ...
 ```
 
- Here we actually spotted a real **bug**, because obviously code need to check `podNamespace` variable at line `165` instead of duplicate check of `podName` variable (_by the way, `Goland` also warns about this issue with `Condition is always false` rule_)
+ Here, we actually spotted a real **bug**, because the code obviously need to check `podNamespace` variable at line `165` instead of duplicate check of `podName` variable (_by the way, `Goland` also warns about this issue with `Condition is always false` rule_)
 
-2. In [`pkg/operator/k8sutil/pod.go`](https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/k8sutil/pod.go#L185) line `185` disappeared from the final assembly but actually compiler emitted necessary logic but attributed assembly listing slightly differently which lead `govanish` to think that this line actually disappeared.
+2. In [`pkg/operator/k8sutil/pod.go`](https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/k8sutil/pod.go#L185) line `185` disappeared from the final assembly but actually compiler emitted necessary logic but attributed assembly listing slightly differently which led `govanish` to think that this line actually disappeared.
 
 {style="counter-set: listing 180"}
  ```go
@@ -137,7 +139,7 @@ func GetMatchingContainer(containers []v1.Container, name string) (v1.Container,
     }
     ...
  ```
-3. In [`pkg/operator/discover/discover.go`](https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/discover/discover.go#L440-L444) file range between lines `440-444` were removed by Go and this is also a **bug** because this is an `else if` condition which comes after `else if len(filter) >= 0` which is always true! (_here, `Goland` is silent and do not see any issue with the code_)
+3. In [`pkg/operator/discover/discover.go`](https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/discover/discover.go#L440-L444) file range between lines `440-444` were removed by Go and this is also a **bug** because this is an `else if` condition which comes after `else if len(filter) >= 0` which is always true, making the subsequent `else if` condition redundant! (_here, `Goland` is silent and do not see any issue with the code_)
 
 {style="counter-set: listing 425"}
  ```go
@@ -157,7 +159,7 @@ func GetMatchingContainer(containers []v1.Container, name string) (v1.Container,
     for i := range nodeDevices {
     ...
  ```
-4. In [`pkg/operator/test/client.go`](https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/test/client.go#L99) file cast check code were removed from the binary because compiler proved that failure condition can never happen. This is not a bug and pretty frequent false-positive case for `govanish`.
+4. In [`pkg/operator/test/client.go`](https://github.com/rook/rook/blob/81d9159c2d6a1393b0c157637d031255e28f8c06/pkg/operator/test/client.go#L99) file cast check code were removed from the binary because compiler proved that failure condition can never happen. This is not a bug and pretty frequent false positive case for `govanish`.
 
  {style="counter-set: listing 96"}
  ```go
@@ -167,4 +169,4 @@ if !ok {
 }
  ```
 
-So overall, on a `rook` repository `govanish` found 2 bugs with 50% false positive rate -- which is not that bad! Actually, on average, false positive rate of linter is higher -- but it still can be useful!
+So overall, on the `rook` repository, `govanish` found 2 bugs with a 50% false positive rate -- which is not that bad! Actually, on average, false positive rate of linter is higher -- but it still can be useful!

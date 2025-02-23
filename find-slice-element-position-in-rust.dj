@@ -183,9 +183,9 @@ fn find(haystack: &[u8], needle: u8) -> Option<usize> {
 
 The full benchmark source code is available here: [./rust-find-bench](https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench)
 
-| method                          |        time | speedup   |
-| :-----                          |        ---: |       --: |
-| `find_naive`                    | `366.06 ns` | `x1.0`    |
-| `find_chunks`                   | `414.06 ns` | `x0.9`    |
-| `find_chunks_exact`             | `133.53 ns` | `x2.7`    |
-| `find_chunks_exact_branchless`  |  `40.48 ns` | *`x9.0`* |
+|method                          |        time| speedup  |
+|:-------------------------------|-----------:|---------:|
+|`find_naive`                    | `366.06 ns`| `x1.0`   |
+|`find_chunks`                   | `414.06 ns`| `x0.9`   |
+|`find_chunks_exact`             | `133.53 ns`| `x2.7`   |
+|`find_chunks_exact_branchless`  |  `40.48 ns`| *`x9.0`* |

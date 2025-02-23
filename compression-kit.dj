@@ -3,19 +3,17 @@
 
 - Varint encode example
 
-``` ckit
-zeros = repeat(bit, 0)
+```ckit
 // we will generate two methods: varint_u32.encode and varint_u32.decode
-fn varint_u32.encode(x: [32]bit) ~ varint_u32.decode(bytes: [?: 1..=5]u8) {
-    scan x ~ bytes {
-        result.push(byte) // ~ byte = result.pop()
-        // we can reconstruct computation because suffix is constant
-        if x[7..].prefix_of(zeros) ~ byte & 0x80 == 0 {
-            byte = x.pop(7) // ~ x.push(byte[0..7])
-            x.pop(0..)      // ~ x.push(zeroes[0..]), instead of break explicitly skip rest of the x
-        } else {
-            byte = x.pop(7) | 0x80
-        }
+fn varint_u32.encode(x: u32) ~ varint_u32.decode(bytes: [?]u8) {
+    bits = x.chunk(1) // bits: Scannable[u1]
+    while true {
+        bits7 = bits.pop<7>()
+        all_zero = bits.are_all(0) // bool == u1
+        // no reassignment are allowed: `byte = byte | 0x01` is forbidden!
+        bytes.push<1>((!all_zero) || bits7) // || / concat - reversible function which takes [n]u1, [m]u1 and produces [n+m]u1
+
+        if all_zero { break }
     }
 }
 ```
@@ -23,13 +21,14 @@ fn varint_u32.encode(x: [32]bit) ~ varint_u32.decode(bytes: [?: 1..=5]u8) {
 - Shrink encode example
 
 ``` ckit
-zeros = repeat(bit, 0)
-fn shrink_u32.encode(x: [32]bit) ~ shrink_u32.decode(bytes: [n: 1..=5]u8) {
-    scan x ~ bytes {
-        result.push(byte) // ~ byte = result.pop()
-        byte = x.pop(8)   // ~ x.push(byte)
-        if x[0..].prefix_of(zeros) ~ result.empty() {
-            x.pop(0..) // ~ x.push(zeroes[0..])
+// (bytes: [n]u8) is a syntax sugar for (n: u32, bytes: [?]u8)
+fn shrink_u32.encode(x: u32) ~ shrink_u32.decode(bytes: [n: 1..=5]u8) {
+    bits = x.chunk(1)
+    while true {
+        bits8 = bits.pop<8>()
+        bytes.push<1>(bits8)
+        if bits.are_all(0) {
+            break
         }
     }
 }
@@ -38,10 +37,10 @@ fn shrink_u32.encode(x: [32]bit) ~ shrink_u32.decode(bytes: [n: 1..=5]u8) {
 - Length prefixing
 
 ``` ckit
-fn length_prefix.encode(b: [n: 0..1<<32]u8) ~ length_prefix.decode(bytes: [?: n+1..=n+5]u8) {
-    bytes.write(varint_length)    // ~ 1. varint_length: [?]u8 = result.read()
-    varint_length = varint_u32(n) // ~ 2. n = varint_u32.decode(varint_length)
-    bytes.write_fixed(n, b)       // ~ 3. b = result.read_fixed(n)
+fn length_prefix.encode(b: [n: u32]u8) ~ length_prefix.decode(bytes: [?]u8) {
+    varint_length = varint_u32.encode(n) // ~ 2. n = varint_u32.decode(varint_length)
+    bytes.push<1>(varint_length)         // ~ 1. varint_length: [?]u8 = result.pop<1>()
+    bytes.push<n>(b)                     // ~ 3. b = result.pop<n>()
 }
 ```
 
@@ -51,18 +50,11 @@ fn length_prefix.encode(b: [n: 0..1<<32]u8) ~ length_prefix.decode(bytes: [?: n+
 // idempotent function: reverse(reverse(b)) == b
 extern fn reverse(b: [n]u8) ~ reverse(b: [n]u8);
 
-fn length_prefix.encode(b: [n: 0..1<<32]u8) ~ length_prefix.decode(bytes: [?: n+1..=n+5]u8) {
-    bytes.write(varint_length)           // ~ 1. varint_length: [?]u8 = result.read()
-    varint_length = varint_u32.encode(n) // ~ 2. n = varint_u32.decode(varint_length)
-    bytes.write_fixed(n, reversed)       // ~ 3. reversed = result.read_fixed(n)
+fn length_prefix.encode(b: [n: u32]u8) ~ length_prefix.decode(bytes: [?]u8) {
     reversed = reverse(b)                // ~ 4. b = reverse(reversed)
-}
-
-fn length_prefix.encode(b: [n: 0..1<<32]u8) ~ length_prefix.decode(bytes: [?: n+1..=n+5]u8) {
     varint_length = varint_u32.encode(n) // ~ 2. n = varint_u32.decode(varint_length)
-    bytes.write(varint_length)           // ~ 1. varint_length: [?]u8 = result.read()
-    reversed = reverse(b)                // ~ 4. b = reverse(reversed)
-    bytes.write_fixed<n>(reversed)       // ~ 3. reversed = result.read_fixed< n >()
+    bytes.push<1>(varint_length)         // ~ 1. varint_length: [?]u8 = result.pop<1>()
+    bytes.push<n>(reversed)              // ~ 3. reversed = result.pop<n>()
 }
 ```
 
@@ -70,34 +62,37 @@ fn length_prefix.encode(b: [n: 0..1<<32]u8) ~ length_prefix.decode(bytes: [?: n+
 
 ``` ckit
 forward state [?]T {
-    mut push(x: T) ~ pop() // dual method - we must call pop for every push in forward order
-    mut write(x: [?]T) ~ read()
-    mut<n: 0..1<<32> write_fixed(x: [n]T) ~ read_fixed()
+    // dual method - we must call pop for every push in forward order
+    // template parameter <n: u32> is the external information which is common for both methods
+    mut<n: u32> push(x: [n]T) ~ pop()
 }
 
 forward state BlocksLru {
+    init<size: u32> forward() ~ backward()
+
     mut encode(offset: u32) ~ decode(encoded: u32)
-    mut touch(offset: u32): void // no dual method - we must call touch with same argument in dual method
+    mut touch(offset: u32) ~ touch(offset: u32) // same dual method - we must call touch with same argument in dual method
 }
 
 forward state FwdBitStream {
-    mut init(): void
-    mut flush(): void
-    mut close(): void
-    mut<n: 0..=64> push(b: [n]bits) ~ pop()
+    init forward() ~ backward()
+
+    mut flush() ~ flush()
+    mut<n: 0..=64> push(b: [n]u1) ~ pop()
 }
 
 // for backward state we must generate dual operations in reverse order
 backward state BwdBitStream {
-    mut init_write() ~ close_read()
+    init () ~ ()
+    deinit () ~ ()
+
     mut flush() ~ reload()
-    mut close_write() ~ init_read()
-    mut<n: 0..=64> push(b: [n]bits) ~ pop()
+    mut<n: 0..=64> push(b: [n]u1) ~ pop()
 }
 
 // must not compile because we .decode can't be implemented
 fn invalid.encode(x: u32) ~ invalid.decode(bytes: [?]u32) {
-    var ( blocks: BlocksLru )
+    blocks = BlocksLru.forward(1024)
     y = blocks.encode(x) // 2. ~ x = blocks_lru.decode(y) !!! y is unknown here but we can't violate state operations order
     z = blocks.encode(y) // 3. ~ y = blocks_lru.decode(z)
     bytes.push(z)        // 1. ~ z = result.pop()
@@ -107,18 +102,17 @@ fn invalid.encode(x: u32) ~ invalid.decode(bytes: [?]u32) {
 - [QOI](https://qoiformat.org/)
 
 ``` ckit
-
 const RGBA = struct {
-    r: 0..256,
-    g: 0..256,
-    b: 0..256,
-    a: 0..256,
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8,
 }
 
 const Header {
     magic: "qoif"
-    width: 0..1<<32
-    height: 0..1<<32
+    width: u32
+    height: u32
     channels: {3, 4}
     colorspace: {0, 1}
 }
@@ -129,50 +123,46 @@ const Operation = union {
     QOI_OP_INDEX = struct { index: 0..64 },
     QOI_OP_DIFF  = struct { dr: -2..2, dg: -2..2, db: -2..2 },
     QOI_OP_LUMA  = struct { dr: -32..32, dr_dg: -8..8, db_dg: -8..8 },
-    QOI_OP_RUN   = struct { run: 0..64 },
+    QOI_OP_RUN   = struct { run: 0..62 },
 }
 
 fn qoi.encode({ header: Header, operations: [n]Operation }) ~ qoi.decode(bytes: [?]u8) {
-    bytes.write_fixed<4>("qoif")            // 1. ~ assert!(bytes.read_fixed<4>() == "qoif")
-    bytes.write_fixed<4>(header.width)      // 2. ~ header.width = bytes.read_fixed<4>()
-    bytes.write_fixed<4>(header.height)     // 3. ~ header.height = bytes.read_fixed<4>()
-    bytes.write_fixed<4>(header.channels)   // 4. ~ header.channels = bytes.read_fixed<4>()
-    bytes.write_fixed<4>(header.colorspace) // 5. ~ header.colorspace = bytes.read_fixed<4>()
+    bytes.push<4>("qoif")            // 1. ~ assert!(bytes.pop<4>() == "qoif")
+    bytes.push<4>(header.width)      // 2. ~ header.width = bytes.pop<4>()
+    bytes.push<4>(header.height)     // 3. ~ header.height = bytes.pop<4>()
+    bytes.push<4>(header.channels)   // 4. ~ header.channels = bytes.pop<4>()
+    bytes.push<4>(header.colorspace) // 5. ~ header.colorspace = bytes.pop<4>()
 
-    ~ size = header.width * header.height // initialize counter only for .decode method
-    scan operations ~ bytes {
-        current = operations.pop()
-        match current {
-            .QOI_OP_RGB ~ bytes[0] == 0b11111110 {
-                bytes.write_fixed<4>([0b11111110, current.r, current.g, current.b])
-                ~ size -= 1
-            }
-            .QOI_OP_RGBA ~ bytes[0] == 0b11111111 {
-                bytes.write_fixed<5>([0b11111111, current.r, current.g, current.b, current.a])
-                ~ size -= 1
-            }
-            .QOI_OP_INDEX ~ bytes[0][0..2] == 0b00 {
-                bytes.write_fixed<1>([0b00 || current.index])
-                ~ size -= 1
-            }
-            .QOI_OP_DIFF ~ bytes[0][0..2] == 0b01 {
-                bytes.write_fixed<1>([0b01 || current.dr + 2 || current.dg + 2 || current.db + 2])
-                ~ size -= 1
-            }
-            .QOI_OP_LUMA ~ bytes[0][0..2] == 0b10 {
-                bytes.write_fixed<2>([0b10 || current.dg + 32, current.dr_dg + 8 || current.db_dg + 8])
-                ~ size -= 1
-            }
-            .QOI_OP_RUN ~ bytes[0][0..2] == 0b11 {
-                bytes.write_fixed<1>([0b11 || current.run])
-                ~ size -= current.run
-            }
-        }
-        if ~ size == 0 {
-            break
+    size = header.width * header.height
+    while size > 0 {
+        operation = operations.pop()
+        bytes.push<1>(tag_payload)
+        if operation == .QOI_OP_RGB {
+            tag_payload = 0b11111110
+            bytes.push<3>([operation.r, operation.g, operation.b])
+            size -= 1
+        } else if operation == .QOI_OP_RGBA {
+            tag_payload = 0b11111111
+            bytes.push<4>([operation.r, operation.g, operation.b, operation.a])
+            size -= 1
+        } else if operation == .QOI_OP_INDEX {
+            tag_payload = 0b00 || operation.index
+            size -= 1
+        } else if operation == .QOI_OP_DIFF {
+            tag_payload = 0b01 || operation.dr + 2 || operation.dg + 2 || operation.db + 2
+            size -= 1
+        } else if operation == .QOI_OP_LUMA {
+            tag_payload = 0b10 || operation.dg + 32
+            bytes.push<1>([operation.dr_dg + 8 || operation.db_dg + 8])
+            size -= 1
+        } else if operation == .QOI_OP_RUN {
+            tag_payload = 0b11 || operation.run
+            size -= operation.run
+        } else {
+            panic("unexpected operation type")
         }
     }
-    bytes.write_fixed<8>([0, 0, 0, 0, 0, 0, 0, 1])
+    bytes.push<8>([0, 0, 0, 0, 0, 0, 0, 1])
 }
 
 forward state qoi.Recent {
