@@ -1,5 +1,5 @@
 {date="2025/03/02"}
-# Find element position in Rust, 9 times faster!
+# Find element's position in Rust -- 9 times faster!
 
 When I started to learn `Rust` and exploring [slice methods][], I was surprised that `Rust` doesn't provide a built-in method for finding the position of an element in a slice.
 
@@ -91,7 +91,24 @@ Remarks listed above highlights two important things:
 2. `LoopVectorizer` was unable to optimize the loop because it has early return (`Cannot vectorize potentially faulting early exit loop`)
 3. `SLPVectorizer` was unable to optimize the loop too for some other reason
 
-Let's try to fix `LoopVectorizer`'s complaint and implement the `find` method without early returns!
+Let's try to fix `LoopVectorizer`'s complaint and implement the `find` method without early return!
+
+::: note
+
+To make things clear, early return appears in our code because under the hood it will be transformed into following form:
+
+```rust
+fn find(haystack: &[u8], needle: u8) -> Option<usize> {
+    for (i, &b) in haystack.iter().enumerate() {
+        if b == needle {
+            return Some(i) // <- here, the early return!
+        }
+    }
+    None
+}
+```
+
+:::
 
 ### Implementing `find` without early returns
 
@@ -168,7 +185,7 @@ Here, we see that `LoopVectorizer` was still unable to optimize the loop due to 
 
 ::: note
 
-It's a bit strange that `LoopVectorizer` was unable to detect the [*reduction* variable](https://llvm.org/docs/Vectorizers.html#reductions) in our case because, for arithmetic operations, it usually works well. But maybe `LoopVectorizer` expect nice math properties from the operation (like commutativity) which assignment operator obviously doesn't have.
+It's a bit strange that `LoopVectorizer` was unable to detect the [reduction variable](https://llvm.org/docs/Vectorizers.html#reductions) in our case because, for arithmetic operations, it usually works well. But maybe `LoopVectorizer` expect nice math properties from the operation (like commutativity) which assignment operator obviously doesn't have.
 :::
 
 ### Activate `SLPVectorizer`!
@@ -186,7 +203,6 @@ void foo(int a1, int a2, int b1, int b2, int *A) {
   A[3] = a2*(a2 + b2);
 }
 ```
-.
 :::
 
 But given that the `loop-unroll` optimization was triggered in our case, it seems natural that after unrolling `SLPVectorizer` can optimize a bunch of repeated actions into vectorized code. What we can do here is to make more explicit that unrolling is beneficial in our case by using fixed-size slice `&[u8; 32]` instead of arbitrary slice. And this works!
@@ -243,11 +259,11 @@ Ok, the victory seems very close! Now we need to overcome the issue that in orde
 
 ### Final vectorized version of `find` method
 
-As we know that `SLPVectorizer` kicks in when slice has fixed size, we should split our original slice into fixed-size chunks and then process them independently with the method without early return. Our first attempt can be to use [`chunks`][chunks] method which do exactly what we want, so let's try it out:
+As we know that `SLPVectorizer` kicks in when slice has fixed size, we should split our original slice into fixed-size chunks and then process them independently with the method without early return. Our first attempt can be to use [chunks][chunks] method which do exactly what we want, so let's try it out:
 
 ::: note
 
-While [`chunks`][chunks] method splits slice into sub-slices of unknown size from the language perspective (they are still `&[u8]` -- not `&[u8; N]`), we can hope that `LLVM` aggressive inlining will help us here and optimizer will understand that slices are fixed sized after all inlining will happen under the hood.
+While [chunks][chunks] method splits slice into sub-slices of unknown size from the language perspective (they are still `&[u8]` -- not `&[u8; N]`), we can hope that `LLVM` aggressive inlining will help us here and optimizer will understand that slices are fixed sized after all inlining will happen under the hood.
 :::
 
 [chunks]: https://doc.rust-lang.org/std/primitive.slice.html#method.chunks
@@ -262,13 +278,13 @@ pub fn find(haystack: &[u8], needle: u8) -> Option<usize> {
 }
 ```
 
-Unfortunately, this doesn't work -- the compiler again produces boring assembly with only the unrolling optimization enabled. But, if we stop and think about it a bits, this is actually expected behaviour! The [`chunks`][chunks] method treats all chunks uniformly, including the last chunk -- which can have a size less than 32 elements!
+Unfortunately, this doesn't work -- the compiler again produces boring assembly with only the unrolling optimization enabled. But, if we stop and think about it a bits, this is actually expected behaviour! The [chunks][chunks] method treats all chunks uniformly, including the last chunk -- which can have a size less than 32 elements!
 
-Luckily, `Rust` developer team thought about this and added method [`chunks_exact`][chunks_exact] specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: `remainder`.
+Luckily, `Rust` developer team thought about this and added method [chunks_exact][chunks_exact] specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: `remainder`.
 
 [chunks_exact]: https://doc.rust-lang.org/std/primitive.slice.html#method.chunks_exact
 
-This final step allows us to make our dream come true: a [vectorized `find` function][final vectorized] using only safe `Rust`!
+This final step allows us to make our dream come true: a vectorized [find][final vectorized] function using only safe `Rust`!
 
 
 [final vectorized]: https://godbolt.org/z/Ej3bx6c7f
@@ -296,11 +312,19 @@ While `LLVM` is good at auto-vectorization, sometimes you need to push it a bit 
 
 Also, it was interesting to look how `LLVM` compiler hints can be exposed to the developer for more deep understanding of the compiler behavior (turned out this is very easy to do as `rustc` allow you to pass additional arguments to the `LLVM` compiler).
 
-And as a final result, the _last_ implementation of the `find` method is **9 times faster** than the _naive_ implementation presented in the beginning of the article. You can find the full benchmark source code here: [./rust-find-bench](https://github.com/sivukhin/sivukhin.github.io/blob/master/rust-find-bench/benches/find.rs)
+And as a final result, the _last_ implementation of the `find` method is **9 times faster** than the _naive_ implementation presented in the beginning of the article. You can find the full benchmark source code here: [rust-find-bench](https://github.com/sivukhin/sivukhin.github.io/blob/master/rust-find-bench/benches/find.rs)
 
-|method                          |        time| speedup  | description |
-|:-------------------------------|-----------:|---------:|:------------|
-|`find_chunks_exact_branchless`  |  `40.18ns`| *`x9.0`* | no-early-return version with `chunk_exact` method |
-|`find_chunks_exact`             | `126.77ns`| `x2.7`   | naive version with `chunks_exact` method  |
-|`find_naive`                    | `356.07ns`| `x1.0`   | naive version from the beginning of the article |
-|`find_chunks`                   | `510.16ns`| `x0.7`   | naive version with `chunks` method |
+|method                               |        time| speedup  |
+|:------------------------------------|-----------:|---------:|
+|`find_chunks_exact_no_early_return`  |  `40.18ns` | *`x9.0`* |
+|`find_chunks_exact`                  | `126.77ns` | `x2.7`   |
+|`find_naive`                         | `356.07ns` | `x1.0`   |
+|`find_chunks`                        | `510.16ns` | `x0.7`   |
+
+::: note
+
+- `find_chunks_exact_no_early_return` -- no-early-return version with `chunk_exact` method
+- `find_chunks_exact` -- naive version with `chunks_exact` method
+- `find_naive` -- naive version from the beginning of the article
+- `find_chunks` -- naive version with `chunks` method
+:::
