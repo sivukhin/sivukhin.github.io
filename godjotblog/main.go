@@ -135,6 +135,27 @@ func build(dir string, meta Meta) {
 			"html",
 			registry,
 			map[djot_parser.DjotNode]djot_parser.Conversion{
+				djot_parser.VerbatimNode: func(s djot_parser.ConversionState, n func(c djot_parser.Children)) {
+					if _, ok := s.Node.Attributes.TryGet(djot_tokenizer.InlineMathKey); ok {
+						attributes := append([]tokenizer.AttributeEntry{{Key: "class", Value: "math inline"}}, s.Node.Attributes.Entries()...)
+						s.Writer.InTag("span", attributes...)(func() {
+							s.Writer.WriteString("\\(")
+							n(nil)
+							s.Writer.WriteString("\\)")
+						})
+					} else if _, ok := s.Node.Attributes.TryGet(djot_tokenizer.DisplayMathKey); ok {
+						attributes := append([]tokenizer.AttributeEntry{{Key: "class", Value: "math display"}}, s.Node.Attributes.Entries()...)
+						s.Writer.InTag("span", attributes...)(func() {
+							s.Writer.WriteString("\\[")
+							n(nil)
+							s.Writer.WriteString("\\]")
+						})
+					} else if rawFormat := s.Node.Attributes.Get(djot_parser.RawInlineFormatKey); rawFormat == s.Format {
+						n(nil)
+					} else {
+						s.Writer.InTag("code", append([]tokenizer.AttributeEntry{{Key: "class", Value: "inline"}}, s.Node.Attributes.Entries()...)...)(func() { n(nil) })
+					}
+				},
 				djot_parser.HeadingNode: func(state djot_parser.ConversionState, next func(djot_parser.Children)) {
 					href := tokenizer.AttributeEntry{
 						Key:   "href",

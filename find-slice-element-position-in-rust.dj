@@ -169,7 +169,6 @@ Here, we see that `LoopVectorizer` was still unable to optimize the loop due to 
 ::: note
 
 It's a bit strange that `LoopVectorizer` was unable to detect the [*reduction* variable](https://llvm.org/docs/Vectorizers.html#reductions) in our case because, for arithmetic operations, it usually works well. But maybe `LoopVectorizer` expect nice math properties from the operation (like commutativity) which assignment operator obviously doesn't have.
-
 :::
 
 ### Activate `SLPVectorizer`!

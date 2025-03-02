@@ -149,28 +149,28 @@
       <p>Here, we see that <code class="inline">LoopVectorizer</code> was still unable to optimize the loop due to the external variable (<code class="inline">pos</code>) used in it. However, <code class="inline">SLPVectorizer</code> kicked in and decided not to optimize the loop, even though it was possible (so it actually found a way to vectorize the loop, hooray!).</p>
       <div class="note">
         <p>It&rsquo;s a bit strange that <code class="inline">LoopVectorizer</code> was unable to detect the <a href="https://llvm.org/docs/Vectorizers.html#reductions"><strong>reduction</strong> variable</a> in our case because, for arithmetic operations, it usually works well. But maybe <code class="inline">LoopVectorizer</code> expect nice math properties from the operation (like commutativity) which assignment operator obviously doesn&rsquo;t have.</p>
-        <div>
-          <section id="Activate-SLPVectorizer">
-            <a class="heading-anchor" href="#Activate-SLPVectorizer"><h3>Activate <code class="inline">SLPVectorizer</code>!</h3>
-            </a><p>The <code class="inline">SLPVectorizer</code> under the hood <a href="https://llvm.org/docs/Vectorizers.html#the-slp-vectorizer">&ldquo;combines similar independent instructions into vector instructions&rdquo;</a> and it&rsquo;s not obvious what it can do in our case because we already have all operations under the loop and there is no more repetitions.</p>
-            <div class="note">
-              <p>Example of <code class="inline">SLPVectorizer</code> from the <code class="inline">LLVM</code> documentation looks like this:</p>
-              <pre class="language-c"><code><span class="keyword">void</span> <span class="function">foo</span>(<span class="keyword">int</span> <span class="identifier">a1</span>, <span class="keyword">int</span> <span class="identifier">a2</span>, <span class="keyword">int</span> <span class="identifier">b1</span>, <span class="keyword">int</span> <span class="identifier">b2</span>, <span class="keyword">int</span> *<span class="identifier">A</span>) {</code>
+      </div>
+    </section>
+    <section id="Activate-SLPVectorizer">
+      <a class="heading-anchor" href="#Activate-SLPVectorizer"><h3>Activate <code class="inline">SLPVectorizer</code>!</h3>
+      </a><p>The <code class="inline">SLPVectorizer</code> under the hood <a href="https://llvm.org/docs/Vectorizers.html#the-slp-vectorizer">&ldquo;combines similar independent instructions into vector instructions&rdquo;</a> and it&rsquo;s not obvious what it can do in our case because we already have all operations under the loop and there is no more repetitions.</p>
+      <div class="note">
+        <p>Example of <code class="inline">SLPVectorizer</code> from the <code class="inline">LLVM</code> documentation looks like this:</p>
+        <pre class="language-c"><code><span class="keyword">void</span> <span class="function">foo</span>(<span class="keyword">int</span> <span class="identifier">a1</span>, <span class="keyword">int</span> <span class="identifier">a2</span>, <span class="keyword">int</span> <span class="identifier">b1</span>, <span class="keyword">int</span> <span class="identifier">b2</span>, <span class="keyword">int</span> *<span class="identifier">A</span>) {</code>
 <code>  <span class="identifier">A</span>[<span class="number">0</span>] = <span class="identifier">a1</span>*(<span class="identifier">a1</span> + <span class="identifier">b1</span>);</code>
 <code>  <span class="identifier">A</span>[<span class="number">1</span>] = <span class="identifier">a2</span>*(<span class="identifier">a2</span> + <span class="identifier">b2</span>);</code>
 <code>  <span class="identifier">A</span>[<span class="number">2</span>] = <span class="identifier">a1</span>*(<span class="identifier">a1</span> + <span class="identifier">b1</span>);</code>
 <code>  <span class="identifier">A</span>[<span class="number">3</span>] = <span class="identifier">a2</span>*(<span class="identifier">a2</span> + <span class="identifier">b2</span>);</code>
 <code>}</code>
 </pre>
-              <p>.</p>
-            </div>
-            <p>But given that the <code class="inline">loop-unroll</code> optimization was triggered in our case, it seems natural that after unrolling <code class="inline">SLPVectorizer</code> can optimize a bunch of repeated actions into vectorized code. What we can do here is to make more explicit that unrolling is beneficial in our case by using fixed-size slice <code class="inline">&amp;[u8; 32]</code> instead of arbitrary slice. And this works!</p>
-            <pre class="noline language-rust"><code><span class="comment">// only signature changed - rest of the code is the same</span></code>
+        <p>.</p>
+      </div>
+      <p>But given that the <code class="inline">loop-unroll</code> optimization was triggered in our case, it seems natural that after unrolling <code class="inline">SLPVectorizer</code> can optimize a bunch of repeated actions into vectorized code. What we can do here is to make more explicit that unrolling is beneficial in our case by using fixed-size slice <code class="inline">&amp;[u8; 32]</code> instead of arbitrary slice. And this works!</p>
+      <pre class="noline language-rust"><code><span class="comment">// only signature changed - rest of the code is the same</span></code>
 <code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find_no_early_returns</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>; <span class="number">32</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
 </pre>
-            <p>For the signature above we will finally see vectorized code in the compiler output:</p>
-            <p>[rustc static]: https://godbolt.org/z/dPno46v5h</p>
-            <pre class="language-asm"><code>example::find_no_early_returns:</code>
+      <p>For the signature above we will finally see vectorized code in the compiler output:</p>
+      <pre class="language-asm"><code>example::find_no_early_returns:</code>
 <code>        <span class="keyword">vmovd</span>   xmm0, esi</code>
 <code>        <span class="keyword">vpbroadcastb</span>    ymm0, xmm0</code>
 <code>        <span class="keyword">vpcmpeqb</span>        ymm0, ymm0, ymmword ptr [rdi]</code>
@@ -195,24 +195,23 @@
 <code>        <span class="keyword">vzeroupper</span></code>
 <code>        <span class="keyword">ret</span></code>
 </pre>
-            <p>Also, <code class="inline">SLPVectorizer</code> reported successful optimization of the loop in the compiler remarks:</p>
-            <pre class="language-shell"><code><span class="command">$> rustc main.rs -C opt-level=3 -C target-cpu=native -Cdebuginfo=full \</span></code>
+      <p>Also, <code class="inline">SLPVectorizer</code> reported successful optimization of the loop in the compiler remarks:</p>
+      <pre class="language-shell"><code><span class="command">$> rustc main.rs -C opt-level=3 -C target-cpu=native -Cdebuginfo=full \</span></code>
 <code><span class="command">    -Cllvm-args=-pass-remarks-analysis='.*' \</span></code>
 <code><span class="command">    -Cllvm-args=-pass-remarks-missed='.*' \</span></code>
 <code><span class="command">    -Cllvm-args=-pass-remarks='.*'</span></code>
 <code>remark: main.rs:17:2: Cannot SLP vectorize list: only 2 elements of buildvalue, trying reduction first.</code>
 <code>remark: main.rs:12:12: Vectorized horizontal reduction with cost -21 and with tree size 3</code>
 </pre>
-            <p>Ok, the victory seems very close! Now we need to overcome the issue that in order for <code class="inline">SLPVectorizer</code> to work we need to utilize fixed-size slices.</p>
-          </section>
-          <section id="Final-vectorized-version-of-find-method">
-            <a class="heading-anchor" href="#Final-vectorized-version-of-find-method"><h3>Final vectorized version of <code class="inline">find</code> method</h3>
-            </a><p>As we know that <code class="inline">SLPVectorizer</code> kicks in when slice has fixed size, we should split our original slice into fixed-size chunks and then process them independently with the method without early return. Our first attempt can be to use <a><code class="inline">chunks</code></a> method which do exactly what we want, so let&rsquo;s try it out:</p>
-            <div class="note">
-              <p>While <a><code class="inline">chunks</code></a> method splits slice into sub-slices of unknown size from the language perspective (they are still <code class="inline">&amp;[u8]</code> &ndash; not <code class="inline">&amp;[u8; N]</code>), we can hope that <code class="inline">LLVM</code> aggressive inlining will help us here and optimizer will understand that slices are fixed sized after all inlining will happen under the hood.</p>
-            </div>
-            <p>[chunks]: https://doc.rust-lang.org/std/primitive.slice.html#method.chunks</p>
-            <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">find_no_early_returns</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
+      <p>Ok, the victory seems very close! Now we need to overcome the issue that in order for <code class="inline">SLPVectorizer</code> to work we need to utilize fixed-size slices.</p>
+    </section>
+    <section id="Final-vectorized-version-of-find-method">
+      <a class="heading-anchor" href="#Final-vectorized-version-of-find-method"><h3>Final vectorized version of <code class="inline">find</code> method</h3>
+      </a><p>As we know that <code class="inline">SLPVectorizer</code> kicks in when slice has fixed size, we should split our original slice into fixed-size chunks and then process them independently with the method without early return. Our first attempt can be to use <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks"><code class="inline">chunks</code></a> method which do exactly what we want, so let&rsquo;s try it out:</p>
+      <div class="note">
+        <p>While <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks"><code class="inline">chunks</code></a> method splits slice into sub-slices of unknown size from the language perspective (they are still <code class="inline">&amp;[u8]</code> &ndash; not <code class="inline">&amp;[u8; N]</code>), we can hope that <code class="inline">LLVM</code> aggressive inlining will help us here and optimizer will understand that slices are fixed sized after all inlining will happen under the hood.</p>
+      </div>
+      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">find_no_early_returns</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
 <code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="identifier">haystack</span></code>
 <code>        .<span class="function">chunks</span>(<span class="number">32</span>)</code>
@@ -220,12 +219,10 @@
 <code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_no_early_returns</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32</span> * <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
 <code>}</code>
 </pre>
-            <p>Unfortunately, this doesn&rsquo;t work &ndash; the compiler again produces boring assembly with only the unrolling optimization enabled. But, if we stop and think about it a bits, this is actually expected behaviour! The <a><code class="inline">chunks</code></a> method treats all chunks uniformly, including the last chunk &ndash; which can have a size less than 32 elements!</p>
-            <p>Luckily, <code class="inline">Rust</code> developer team thought about this and added method <a><code class="inline">chunks_exact</code></a> specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: <code class="inline">remainder</code>.</p>
-            <p>[chunks_exact]: https://doc.rust-lang.org/std/primitive.slice.html#method.chunks_exact</p>
-            <p>This final step allows us to make our dream come true: a <a>vectorized <code class="inline">find</code> function</a> using only safe <code class="inline">Rust</code>!</p>
-            <p>[final vectorized]: https://godbolt.org/z/Ej3bx6c7f</p>
-            <pre class="language-rust"><code><span class="comment">// bonus: refactoring of find_branchless function to make it more elegant!</span></code>
+      <p>Unfortunately, this doesn&rsquo;t work &ndash; the compiler again produces boring assembly with only the unrolling optimization enabled. But, if we stop and think about it a bits, this is actually expected behaviour! The <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks"><code class="inline">chunks</code></a> method treats all chunks uniformly, including the last chunk &ndash; which can have a size less than 32 elements!</p>
+      <p>Luckily, <code class="inline">Rust</code> developer team thought about this and added method <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks_exact"><code class="inline">chunks_exact</code></a> specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: <code class="inline">remainder</code>.</p>
+      <p>This final step allows us to make our dream come true: a <a href="https://godbolt.org/z/Ej3bx6c7f">vectorized <code class="inline">find</code> function</a> using only safe <code class="inline">Rust</code>!</p>
+      <pre class="language-rust"><code><span class="comment">// bonus: refactoring of find_branchless function to make it more elegant!</span></code>
 <code><span class="keyword">fn</span> <span class="function">find_no_early_returns</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="keyword">return</span> <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">enumerate</span>()</code>
 <code>        .<span class="function">filter</span>(|(_, &<span class="identifier">b</span>)| <span class="identifier">b</span> == <span class="identifier">needle</span>)</code>
@@ -240,47 +237,44 @@
 <code>        .<span class="function">or</span>(<span class="function">find_no_early_returns</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| (<span class="identifier">haystack</span>.<span class="function">len</span>() & !<span class="number">0</span><span class="identifier">x1f</span>) + <span class="identifier">x</span>))</code>
 <code>}</code>
 </pre>
-          </section>
-          <section id="Conclusion-and-benchmarks">
-            <a class="heading-anchor" href="#Conclusion-and-benchmarks"><h3>Conclusion and benchmarks</h3>
-            </a><p>While <code class="inline">LLVM</code> is good at auto-vectorization, sometimes you need to push it a bit to make your case more obvious for optimization passes. And here <code class="inline">Rust</code> standard library combined with <code class="inline">LLVM</code> aggressive inlining will allow to make non-trivial structural changes in the code while keeping it completely safe (I imagine that <code class="inline">chunks_exact</code> method can be very helpful for various other cases).</p>
-            <p>Also, it was interesting to look how <code class="inline">LLVM</code> compiler hints can be exposed to the developer for more deep understanding of the compiler behavior (turned out this is very easy to do as <code class="inline">rustc</code> allow you to pass additional arguments to the <code class="inline">LLVM</code> compiler).</p>
-            <p>And as a final result, the <em>last</em> implementation of the <code class="inline">find</code> method is <strong><strong>9 times faster</strong></strong> than the <em>naive</em> implementation presented in the beginning of the article. You can find the full benchmark source code here: <a href="https://github.com/sivukhin/sivukhin.github.io/blob/master/rust-find-bench/benches/find.rs">./rust-find-bench</a></p>
-            <table>
-              <tr>
-                <th style="text-align: left;">method</th>
-                <th style="text-align: right;">time</th>
-                <th style="text-align: right;">speedup</th>
-                <th style="text-align: left;">description</th>
-              </tr>
-              <tr>
-                <td style="text-align: left;"><code class="inline">find_chunks_exact_branchless</code></td>
-                <td style="text-align: right;"><code class="inline">40.18ns</code></td>
-                <td style="text-align: right;"><strong><code class="inline">x9.0</code></strong></td>
-                <td style="text-align: left;">no-early-return version with <code class="inline">chunk_exact</code> method</td>
-              </tr>
-              <tr>
-                <td style="text-align: left;"><code class="inline">find_chunks_exact</code></td>
-                <td style="text-align: right;"><code class="inline">126.77ns</code></td>
-                <td style="text-align: right;"><code class="inline">x2.7</code></td>
-                <td style="text-align: left;">naive version with <code class="inline">chunks_exact</code> method</td>
-              </tr>
-              <tr>
-                <td style="text-align: left;"><code class="inline">find_naive</code></td>
-                <td style="text-align: right;"><code class="inline">356.07ns</code></td>
-                <td style="text-align: right;"><code class="inline">x1.0</code></td>
-                <td style="text-align: left;">naive version from the beginning of the article</td>
-              </tr>
-              <tr>
-                <td style="text-align: left;"><code class="inline">find_chunks</code></td>
-                <td style="text-align: right;"><code class="inline">510.16ns</code></td>
-                <td style="text-align: right;"><code class="inline">x0.7</code></td>
-                <td style="text-align: left;">naive version with <code class="inline">chunks</code> method</td>
-              </tr>
-            </table>
-          </section>
-        </div>
-      </div>
+    </section>
+    <section id="Conclusion-and-benchmarks">
+      <a class="heading-anchor" href="#Conclusion-and-benchmarks"><h3>Conclusion and benchmarks</h3>
+      </a><p>While <code class="inline">LLVM</code> is good at auto-vectorization, sometimes you need to push it a bit to make your case more obvious for optimization passes. And here <code class="inline">Rust</code> standard library combined with <code class="inline">LLVM</code> aggressive inlining will allow to make non-trivial structural changes in the code while keeping it completely safe (I imagine that <code class="inline">chunks_exact</code> method can be very helpful for various other cases).</p>
+      <p>Also, it was interesting to look how <code class="inline">LLVM</code> compiler hints can be exposed to the developer for more deep understanding of the compiler behavior (turned out this is very easy to do as <code class="inline">rustc</code> allow you to pass additional arguments to the <code class="inline">LLVM</code> compiler).</p>
+      <p>And as a final result, the <em>last</em> implementation of the <code class="inline">find</code> method is <strong><strong>9 times faster</strong></strong> than the <em>naive</em> implementation presented in the beginning of the article. You can find the full benchmark source code here: <a href="https://github.com/sivukhin/sivukhin.github.io/blob/master/rust-find-bench/benches/find.rs">./rust-find-bench</a></p>
+      <table>
+        <tr>
+          <th style="text-align: left;">method</th>
+          <th style="text-align: right;">time</th>
+          <th style="text-align: right;">speedup</th>
+          <th style="text-align: left;">description</th>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><code class="inline">find_chunks_exact_branchless</code></td>
+          <td style="text-align: right;"><code class="inline">40.18ns</code></td>
+          <td style="text-align: right;"><strong><code class="inline">x9.0</code></strong></td>
+          <td style="text-align: left;">no-early-return version with <code class="inline">chunk_exact</code> method</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><code class="inline">find_chunks_exact</code></td>
+          <td style="text-align: right;"><code class="inline">126.77ns</code></td>
+          <td style="text-align: right;"><code class="inline">x2.7</code></td>
+          <td style="text-align: left;">naive version with <code class="inline">chunks_exact</code> method</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><code class="inline">find_naive</code></td>
+          <td style="text-align: right;"><code class="inline">356.07ns</code></td>
+          <td style="text-align: right;"><code class="inline">x1.0</code></td>
+          <td style="text-align: left;">naive version from the beginning of the article</td>
+        </tr>
+        <tr>
+          <td style="text-align: left;"><code class="inline">find_chunks</code></td>
+          <td style="text-align: right;"><code class="inline">510.16ns</code></td>
+          <td style="text-align: right;"><code class="inline">x0.7</code></td>
+          <td style="text-align: left;">naive version with <code class="inline">chunks</code> method</td>
+        </tr>
+      </table>
     </section>
 </div>
     <hr/>
