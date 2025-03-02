@@ -4,7 +4,7 @@
     <meta charset="utf-8"/>
     <meta name="author" content="Nikita Sivukhin"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find slice element position in Rust, fast!</title>
+    <title>Find element position in Rust, 9 times faster!</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -15,20 +15,21 @@
         </header>
     </div>
     <div class="article">
-    <section id="Find-slice-element-position-in-Rust-fast">
-      <a class="heading-anchor" href="#Find-slice-element-position-in-Rust-fast"><h1 date="2024/01/13">Find slice element position in Rust, fast!</h1>
-      </a><p>I started to learn <code>Rust</code> only recently and while exploring <a href="https://doc.rust-lang.org/std/primitive.slice.html">slice methods</a> I was a bit surprised that I didn&rsquo;t find any method for finding the position of element in the slice:</p>
-      <pre class="noline language-rust"><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
-</pre>
-      <p>I had some experience with <code>Zig</code> which has a very useful <a href="https://ziglang.org/documentation/master/std/#A;std:mem"><code>std.mem</code></a> module with many generic functions including <code>indexOf</code>, which internally implements <a href="https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore%E2%80%93Horspool_algorithm">Boyer-Moore-Horspool</a> pattern matching algorithm against generic element type <code>T</code>:</p>
-      <pre class="noline language-zig"><code><span class="keyword">fn</span> <span class="function">indexOf</span>(<span class="keyword">comptime</span> <span class="identifier">T</span>: <span class="identifier">type</span>, <span class="identifier">haystack</span>: []<span class="keyword">const</span> <span class="identifier">T</span>, <span class="identifier">needle</span>: []<span class="keyword">const</span> <span class="identifier">T</span>) ?<span class="identifier">usize</span> { ... }</code>
-</pre>
-      <p>After discussing with <code>Rust</code> experts I quickly got the response that I can just use methods of <code>Iterator</code> traits:</p>
-      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
+    <section id="Find-element-position-in-Rust-9-times-faster">
+      <a class="heading-anchor" href="#Find-element-position-in-Rust-9-times-faster"><h1 date="2025/03/02">Find element position in Rust, 9 times faster!</h1>
+      </a><p>When I started to learn <code class="inline">Rust</code> and exploring <a href="https://doc.rust-lang.org/std/primitive.slice.html">slice methods</a>, I was surprised that <code class="inline">Rust</code> doesn&rsquo;t provide a built-in method for finding the position of an element in a slice.</p>
+      <p>Of course, this is not a big problem, as anyone can implement a simple and concise one-liner for that purpose, like the following:</p>
+      <pre class="noline language-rust"><code><span class="comment">// for simplicity, I will use u8 type instead of generics throughout the post</span></code>
+<code><span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">position</span>(|&<span class="identifier">x</span>| <span class="identifier">x</span> == <span class="identifier">needle</span>)</code>
 <code>}</code>
 </pre>
-      <p>Nice! But what about performance of this method? At first, I was afraid that using lambda function with closure will lead to poor performance (coming from <code>Go</code> with non-<code>LLVM</code> based compiler which has pretty limited power of inlining optimization). But, unsurprisingly for most of the developers, <code>LLVM</code> (and <code>Rust</code>) can optimize this method very nicely and <code>rustc</code> produce <a href="https://godbolt.org/z/YrvjKfx1v">very clean</a> binary with <code>-C opt-level=3 -C target-cpu=native</code> release profile flags:</p>
+      <p>This is really nice, but what about the performance of this implementation? It turns out that while the performance of this method is good, you can make the implementation <strong><strong>9 times faster</strong></strong> by restructuring the code to help the <code class="inline">LLVM</code> compiler backend to vectorize it.</p>
+      <p>Let&rsquo;s dig a bit deeper into how we can achieve this performance boost for such a simple task.</p>
+    </section>
+    <section id="First-version">
+      <a class="heading-anchor" href="#First-version"><h3>First version</h3>
+      </a><p>First of all, let&rsquo;s look at the compiler output which <code class="inline">rustc</code> produces (<a href="https://godbolt.org/z/T5q4nsszc">godbolt</a> output with <code class="inline">-C opt-level=3 -C target-cpu=native</code> release profile flags):</p>
       <pre class="language-asm"><code><span class="comment"># input : rdi=haystack.ptr, rsi=haystack.size, rdx=needle</span></code>
 <code><span class="comment"># output: rax=None/Some, rdx=Some(v)</span></code>
 <code>example::find:</code>
@@ -53,14 +54,52 @@
 <code>        <span class="keyword">mov</span>     eax, <span class="number">1</span></code>
 <code>        <span class="keyword">ret</span></code>
 </pre>
-      <p>Can we improve the method&rsquo;s performance?</p>
+      <p>While the assembler code is very clean and do the job, it lacks one important component &ndash; vectorization! For such simple operation over primitive <code class="inline">u8</code> type I would expect <code class="inline">LLVM</code> to came up with some clever vectorized version for performance boost. For example, consider the <a href="https://godbolt.org/z/8YGe8sbPs">compilation result</a> for <code class="inline">haystack.iter().sum()</code> one-liner:</p>
+      <pre class="language-asm"><code><span class="comment"># core vectorized loop; whole listing omitted for brevity</span></code>
+<code>.LBB0_7:</code>
+<code>        <span class="keyword">vpaddb</span>  ymm0, ymm0, ymmword ptr [rdi + rax]</code>
+<code>        <span class="keyword">vpaddb</span>  ymm1, ymm1, ymmword ptr [rdi + rax + <span class="number">32</span>]</code>
+<code>        <span class="keyword">vpaddb</span>  ymm2, ymm2, ymmword ptr [rdi + rax + <span class="number">64</span>]</code>
+<code>        <span class="keyword">vpaddb</span>  ymm3, ymm3, ymmword ptr [rdi + rax + <span class="number">96</span>]</code>
+<code>        <span class="keyword">sub</span>     rax, <span class="number">-128</span></code>
+<code>        <span class="keyword">cmp</span>     rcx, rax</code>
+<code>        <span class="keyword">jne</span>     .LBB0_7</code>
+</pre>
+      <p>You can notice that here compiler decided to use <code class="inline">YMM[N]</code> registers which are 256-bit wide AVX registers. So, in the case of <code class="inline">u8</code> elements, a single <code class="inline">vpaddb</code> operation will simultaneously process 32 elements of our slice and potentially increase the speed of the <code class="inline">sum()</code> method by a <strong><strong>factor of 32</strong></strong>!</p>
+      <p>So, what is preventing <code class="inline">LLVM</code> from using vectorization in our implementation of <code class="inline">find</code> method? We can make a guess or use <code class="inline">LLVM</code> optimization <a href="https://llvm.org/docs/Remarks.html">remarks</a>, which will hint at problems with our implementation:</p>
+      <pre class="language-shell"><code><span class="command">$> rustc main.rs -C opt-level=3 -C target-cpu=native -Cdebuginfo=full \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks-analysis='.*' \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks-missed='.*' \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks='.*'</span></code>
+<code>remark: /.../iter/macros.rs:361:24: loop not vectorized: Cannot vectorize potentially faulting early exit loop</code>
+<code>remark: /.../iter/macros.rs:361:24: loop not vectorized</code>
+<code>remark: /.../iter/macros.rs:0:0: Cannot SLP vectorize list: vectorization was impossible with available vectorization factors</code>
+<code>remark: /.../iter/macros.rs:370:14: Cannot SLP vectorize list: only 2 elements of buildvalue, trying reduction first.</code>
+<code>remark: /.../iter/macros.rs:0:0: Cannot SLP vectorize list: vectorization was impossible with available vectorization factors</code>
+</pre>
+      <p>Remarks listed above highlights two important things:</p>
+      <ol>
+        <li>
+          <code class="inline">LLVM</code> has 2 types of <a href="https://llvm.org/docs/Vectorizers.html">vectorization optimizations</a>: <code class="inline">LoopVectorizer</code> and <code class="inline">SLPVectorizer</code>
+        </li>
+        <li>
+          <code class="inline">LoopVectorizer</code> was unable to optimize the loop because it has early return (<code class="inline">Cannot vectorize potentially faulting early exit loop</code>)
+        </li>
+        <li>
+          <code class="inline">SLPVectorizer</code> was unable to optimize the loop too for some other reason
+        </li>
+      </ol>
+      <p>Let&rsquo;s try to fix <code class="inline">LoopVectorizer</code>&rsquo;s complaint and implement the <code class="inline">find</code> method without early returns!</p>
     </section>
     <section id="Implementing-find-without-early-returns">
-      <a class="heading-anchor" href="#Implementing-find-without-early-returns"><h3>Implementing <code>find</code> without early returns</h3>
-      </a><p>We can notice that for other iterator methods like <code>filter</code> compiler will use <code>SSE / AVX</code> instructions (if target CPU supports them). Then, what is preventing compiler from using <code>SIMD</code> instructions for <code>position</code> method? Internally within a team we came to the conclusion that <code>position</code> method implementation returns early which makes it harder for <code>LLVM</code> to apply <code>SIMD</code> (although I have no proofs for that).</p>
-      <p>We can assume that compiler will be able to vectorize function if it will have predictable amount of operations (static or with simple relation of input properties like slice length). How can we achieve that for the <code>position</code> function? Actually, there is a nice way to implement it without <code>break</code> in the middle of the loop: we just need to process slice in reverse order! Then, in this case, we can just reassign result variable if we found matching element:</p>
-      <pre class="language-rust"><code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
-<code>    <span class="keyword">let</span> <span class="keyword">mut</span> <span class="identifier">position</span> = <span class="identifier">None</span>::<<span class="identifier">usize</span>>;</code>
+      <a class="heading-anchor" href="#Implementing-find-without-early-returns"><h3>Implementing <code class="inline">find</code> without early returns</h3>
+      </a><p>As our implementation of <code class="inline">find</code> method needs to find first occurrence of the element &ndash; it needs to return when it first encounter the element during natural left-to-right slice traversal. So, in case of natural order enumeration <code class="inline">return</code> is inevitable. But what if we traverse slice elements in reverse order, from right-to-left? In this case we will need to find &ldquo;last&rdquo; occurrence of the element (<em>according to the enumeration order</em>) and we will no longer need an early return!</p>
+      <div class="note">
+        <p>Note, that right-to-left enumeration is pretty inefficient as it needs to traverse whole slice in order to find first occurrence, while original <code class="inline">find</code> implementation works much faster if first <code class="inline">needle</code> occurrence appear close to the slice start. We will fix that later, but for now let&rsquo;s focus on fixing the early return problem to please the vectorization optimizators.</p>
+      </div>
+      <p>So, the implementation of the <code class="inline">find</code> method without early returns looks like this:</p>
+      <pre class="language-rust"><code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find_no_early_returns</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
+<code>    <span class="keyword">let</span> <span class="keyword">mut</span> <span class="identifier">position</span> = <span class="identifier">None</span>;</code>
 <code>    <span class="keyword">for</span> (<span class="identifier">i</span>, &<span class="identifier">b</span>) <span class="keyword">in</span> <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">enumerate</span>().<span class="function">rev</span>() {</code>
 <code>        <span class="keyword">if</span> <span class="identifier">b</span> == <span class="identifier">needle</span> {</code>
 <code>            <span class="identifier">position</span> = <span class="function">Some</span>(<span class="identifier">i</span>);</code>
@@ -69,69 +108,125 @@
 <code>    <span class="identifier">position</span></code>
 <code>}</code>
 </pre>
-      <p>Unfortunately, this doesn&rsquo;t help &ndash; there are still to <code>SIMD</code> instructions in the output assembler. But wait, we can notice drastic changes in the <a href="https://godbolt.org/z/5Eh5rfaW3">output binary</a> &ndash; now it seems like compiler unrolled our main loop and compare bytes in chunks of size 8:</p>
+      <p>Unfortunately, this doesn&rsquo;t help &ndash; there are still no <code class="inline">SIMD</code> instructions in the output assembly. But we can notice drastic changes in the <a href="https://godbolt.org/z/nEPG8WWxq">output binary</a> and also in the remarks produced by <code class="inline">LLVM</code> &ndash; now compiler unrolled our main loop and compare bytes in chunks of size 8:</p>
       <pre class="language-asm"><code><span class="comment"># there is just a part of the assembler, you can find full output by the godbolt link</span></code>
 <code>.LBB0_11:</code>
 <code>        <span class="keyword">cmp</span>     byte ptr [r8 + r11 - <span class="number">1</span>], dl</code>
 <code>        <span class="keyword">lea</span>     r14, [rsi + r11 - <span class="number">1</span>]</code>
-<code>        <span class="keyword">lea</span>     r15, [rsi + r11 - <span class="number">7</span>]</code>
 <code>        <span class="keyword">cmovne</span>  r14, rcx</code>
+<code>        <span class="keyword">lea</span>     rcx, [rsi + r11 - <span class="number">2</span>]</code>
 <code>        <span class="keyword">cmove</span>   rax, rbx</code>
 <code>        <span class="keyword">cmp</span>     byte ptr [r8 + r11 - <span class="number">2</span>], dl</code>
-<code>        <span class="keyword">lea</span>     rcx, [rsi + r11 - <span class="number">2</span>]</code>
 <code>        <span class="keyword">cmovne</span>  rcx, r14</code>
+<code>        <span class="keyword">lea</span>     r14, [rsi + r11 - <span class="number">3</span>]</code>
 <code>        <span class="keyword">cmove</span>   rax, rbx</code>
 <code>        ...</code>
+<code>        <span class="keyword">cmove</span>   rax, rbx</code>
 <code>        <span class="keyword">cmp</span>     byte ptr [r8 + r11 - <span class="number">8</span>], dl</code>
-<code>        <span class="keyword">lea</span>     rcx, [rsi + r11 - <span class="number">8</span>]</code>
-<code>        <span class="keyword">cmovne</span>  rcx, r15</code>
+<code>        <span class="keyword">cmovne</span>  rcx, r14</code>
 <code>        <span class="keyword">cmove</span>   rax, rbx</code>
 </pre>
-      <p>That&rsquo;s looks promising! Unrolling will help in performance by itself, but we can be on the right path to the successful vectorization guidance for the compiler!</p>
-    </section>
-    <section id="Vectorization-by-any-means">
-      <a class="heading-anchor" href="#Vectorization-by-any-means"><h3>Vectorization by any means!</h3>
-      </a><p>At this point, I had no clue of how I can simplify life of the compiler except only one last thing &ndash; we can make slice length constant and hope that this will finally activate vectorization engine in the <code>LLVM</code>. Turns out that this was enough! If we will use <code>[u8; 16]</code> or <code>[u8; 32]</code> types for input arguments &ndash; then <code>LLVM</code> <a href="https://godbolt.org/z/csYjj769s">will use</a> <code>128</code>-bit or <code>256</code>-bit <code>SSE</code> / <code>AVX</code> registers and corresponding instructions!</p>
-      <pre class="language-asm"><code>example::find_branchless:</code>
+      <div class="note">
+        <p>You can notice that the compiler generates truly branch-less code for the unrolled section (literally, no jump instructions!). This can be surprising at the first sight, but actually compiler make use of <code class="inline">cmove</code> (&ldquo;conditional move&rdquo;) instruction which move value between operands only if the <code class="inline">flags</code> register are in the specific state. This instruction has much better performance than an ordinary <code class="inline">CMP</code>/<code class="inline">JEQ</code> pair and can be used in a simple conditional scenarios like we have in the no-early-return implementation of the <code class="inline">find</code> function.</p>
+      </div>
+      <p>And <code class="inline">LLVM</code> remarks now are different:</p>
+      <pre class="language-shell"><code><span class="command">$> rustc main.rs -C opt-level=3 -C target-cpu=native -Cdebuginfo=full \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks-analysis='.*' \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks-missed='.*' \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks='.*'</span></code>
+<code>remark: /.../slice/iter/macros.rs:25:86: loop not vectorized: value that could not be identified as reduction is used outside the loop</code>
+<code>remark: /.../slice/iter/macros.rs:25:86: loop not vectorized</code>
+<code>remark: main.rs:0:0: Cannot SLP vectorize list: vectorization was impossible with available vectorization factors</code>
+<code>remark: main.rs:0:0: List vectorization was possible but not beneficial with cost 0 >= 0</code>
+<code>remark: main.rs:0:0: List vectorization was possible but not beneficial with cost 0 >= 0</code>
+<code>remark: main.rs:17:2: Cannot SLP vectorize list: only 2 elements of buildvalue, trying reduction first.</code>
+<code>remark: main.rs:0:0: List vectorization was possible but not beneficial with cost 0 >= 0</code>
+<code>remark: <unknown>:0:0: Cannot SLP vectorize list: vectorization was impossible with available vectorization factors</code>
+<code>remark: <unknown>:0:0: List vectorization was possible but not beneficial with cost 0 >= 0</code>
+<code>remark: <unknown>:0:0: List vectorization was possible but not beneficial with cost 0 >= 0</code>
+<code>remark: /.../slice/iter/macros.rs:25:86: unrolled loop by a factor of 8 with run-time trip count</code>
+</pre>
+      <p>Here, we see that <code class="inline">LoopVectorizer</code> was still unable to optimize the loop due to the external variable (<code class="inline">pos</code>) used in it. However, <code class="inline">SLPVectorizer</code> kicked in and decided not to optimize the loop, even though it was possible (so it actually found a way to vectorize the loop, hooray!).</p>
+      <div class="note">
+        <p>It&rsquo;s a bit strange that <code class="inline">LoopVectorizer</code> was unable to detect the <a href="https://llvm.org/docs/Vectorizers.html#reductions"><strong>reduction</strong> variable</a> in our case because, for arithmetic operations, it usually works well. But maybe <code class="inline">LoopVectorizer</code> expect nice math properties from the operation (like commutativity) which assignment operator obviously doesn&rsquo;t have.</p>
+        <div>
+          <section id="Activate-SLPVectorizer">
+            <a class="heading-anchor" href="#Activate-SLPVectorizer"><h3>Activate <code class="inline">SLPVectorizer</code>!</h3>
+            </a><p>The <code class="inline">SLPVectorizer</code> under the hood <a href="https://llvm.org/docs/Vectorizers.html#the-slp-vectorizer">&ldquo;combines similar independent instructions into vector instructions&rdquo;</a> and it&rsquo;s not obvious what it can do in our case because we already have all operations under the loop and there is no more repetitions.</p>
+            <div class="note">
+              <p>Example of <code class="inline">SLPVectorizer</code> from the <code class="inline">LLVM</code> documentation looks like this:</p>
+              <pre class="language-c"><code><span class="keyword">void</span> <span class="function">foo</span>(<span class="keyword">int</span> <span class="identifier">a1</span>, <span class="keyword">int</span> <span class="identifier">a2</span>, <span class="keyword">int</span> <span class="identifier">b1</span>, <span class="keyword">int</span> <span class="identifier">b2</span>, <span class="keyword">int</span> *<span class="identifier">A</span>) {</code>
+<code>  <span class="identifier">A</span>[<span class="number">0</span>] = <span class="identifier">a1</span>*(<span class="identifier">a1</span> + <span class="identifier">b1</span>);</code>
+<code>  <span class="identifier">A</span>[<span class="number">1</span>] = <span class="identifier">a2</span>*(<span class="identifier">a2</span> + <span class="identifier">b2</span>);</code>
+<code>  <span class="identifier">A</span>[<span class="number">2</span>] = <span class="identifier">a1</span>*(<span class="identifier">a1</span> + <span class="identifier">b1</span>);</code>
+<code>  <span class="identifier">A</span>[<span class="number">3</span>] = <span class="identifier">a2</span>*(<span class="identifier">a2</span> + <span class="identifier">b2</span>);</code>
+<code>}</code>
+</pre>
+              <p>.</p>
+            </div>
+            <p>But given that the <code class="inline">loop-unroll</code> optimization was triggered in our case, it seems natural that after unrolling <code class="inline">SLPVectorizer</code> can optimize a bunch of repeated actions into vectorized code. What we can do here is to make more explicit that unrolling is beneficial in our case by using fixed-size slice <code class="inline">&amp;[u8; 32]</code> instead of arbitrary slice. And this works!</p>
+            <pre class="noline language-rust"><code><span class="comment">// only signature changed - rest of the code is the same</span></code>
+<code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find_no_early_returns</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>; <span class="number">32</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
+</pre>
+            <p>For the signature above we will finally see vectorized code in the compiler output:</p>
+            <p>[rustc static]: https://godbolt.org/z/dPno46v5h</p>
+            <pre class="language-asm"><code>example::find_no_early_returns:</code>
 <code>        <span class="keyword">vmovd</span>   xmm0, esi</code>
-<code>        <span class="keyword">vpbroadcastb</span>    xmm0, xmm0</code>
-<code>        <span class="keyword">vpcmpeqb</span>        xmm0, xmm0, xmmword ptr [rdi]</code>
-<code>        <span class="keyword">vpextrb</span> eax, xmm0, <span class="number">14</span></code>
-<code>        <span class="keyword">vpextrb</span> ecx, xmm0, <span class="number">13</span></code>
-<code>        <span class="keyword">vpextrb</span> edx, xmm0, <span class="number">10</span></code>
+<code>        <span class="keyword">vpbroadcastb</span>    ymm0, xmm0</code>
+<code>        <span class="keyword">vpcmpeqb</span>        ymm0, ymm0, ymmword ptr [rdi]</code>
+<code>        <span class="keyword">vpmovmskb</span>       ecx, ymm0</code>
+<code>        <span class="keyword">mov</span>     eax, ecx</code>
+<code>        <span class="keyword">shr</span>     eax, <span class="number">30</span></code>
 <code>        <span class="keyword">and</span>     eax, <span class="number">1</span></code>
-<code>        <span class="keyword">xor</span>     rax, <span class="number">15</span></code>
+<code>        <span class="keyword">xor</span>     rax, <span class="number">31</span></code>
+<code>        <span class="keyword">test</span>    ecx, <span class="number">536870912</span></code>
+<code>        <span class="keyword">mov</span>     edx, <span class="number">29</span></code>
+<code>        <span class="keyword">cmove</span>   rdx, rax</code>
+<code>        ... <span class="comment"># there are a lot of instructions for determining actual position of matched byte</span></code>
+<code>        <span class="keyword">test</span>    cl, <span class="number">2</span></code>
+<code>        <span class="keyword">mov</span>     esi, <span class="number">1</span></code>
+<code>        <span class="keyword">cmove</span>   rsi, rax</code>
+<code>        <span class="keyword">xor</span>     edx, edx</code>
 <code>        <span class="keyword">test</span>    cl, <span class="number">1</span></code>
-<code>        <span class="keyword">mov</span>     ecx, <span class="number">13</span></code>
-<code>        <span class="keyword">cmove</span>   rcx, rax</code>
-<code>        <span class="keyword">vpextrb</span> eax, xmm0, <span class="number">12</span></code>
-<code>        <span class="comment"># ... there are a lot of instructions for determining actual position of matched byte ...</span></code>
-<code>        <span class="keyword">vpmovmskb</span>       esi, xmm0</code>
-<code>        <span class="keyword">cmove</span>   rdx, rcx</code>
+<code>        <span class="keyword">cmove</span>   rdx, rsi</code>
 <code>        <span class="keyword">xor</span>     eax, eax</code>
-<code>        <span class="keyword">test</span>    esi, esi</code>
+<code>        <span class="keyword">test</span>    ecx, ecx</code>
 <code>        <span class="keyword">setne</span>   al</code>
+<code>        <span class="keyword">vzeroupper</span></code>
 <code>        <span class="keyword">ret</span></code>
 </pre>
-      <p>You can notice that compiler generates truly branch-less code (literally, no jump instructions!). This can be surprising at the first sight, but actually compiler make use of <code>cmove</code> (&ldquo;conditional move&rdquo;) instruction which move value between operands only if the flags register are in the specific state. This instruction has way better performance then ordinary <code>CMP</code> / <code>JEQ</code> pair and allow to implement simple conditional scenarios like we have in the branch-less implementation of <code>find</code> function.</p>
-    </section>
-    <section id="Vectorized-version-of-find">
-      <a class="heading-anchor" href="#Vectorized-version-of-find"><h3>Vectorized version of <code>find</code></h3>
-      </a><p>Ok, that&rsquo;s great that we finally forced <code>rustc</code> to use vectorization. But current <code>find</code> implementation is barely usable because it works only for byte arrays of fixed size! What can we do about that?</p>
-      <p>Here the actions are straightforward &ndash; we can split our input slice in chunks of bounded size and try to apply our branch-less implementation of <code>find</code> method for them. <code>Rust</code> has nice <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks"><code>chunks</code></a> function which do exactly what we want, let&rsquo;s try to use it:</p>
-      <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
+            <p>Also, <code class="inline">SLPVectorizer</code> reported successful optimization of the loop in the compiler remarks:</p>
+            <pre class="language-shell"><code><span class="command">$> rustc main.rs -C opt-level=3 -C target-cpu=native -Cdebuginfo=full \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks-analysis='.*' \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks-missed='.*' \</span></code>
+<code><span class="command">    -Cllvm-args=-pass-remarks='.*'</span></code>
+<code>remark: main.rs:17:2: Cannot SLP vectorize list: only 2 elements of buildvalue, trying reduction first.</code>
+<code>remark: main.rs:12:12: Vectorized horizontal reduction with cost -21 and with tree size 3</code>
+</pre>
+            <p>Ok, the victory seems very close! Now we need to overcome the issue that in order for <code class="inline">SLPVectorizer</code> to work we need to utilize fixed-size slices.</p>
+          </section>
+          <section id="Final-vectorized-version-of-find-method">
+            <a class="heading-anchor" href="#Final-vectorized-version-of-find-method"><h3>Final vectorized version of <code class="inline">find</code> method</h3>
+            </a><p>As we know that <code class="inline">SLPVectorizer</code> kicks in when slice has fixed size, we should split our original slice into fixed-size chunks and then process them independently with the method without early return. Our first attempt can be to use <a><code class="inline">chunks</code></a> method which do exactly what we want, so let&rsquo;s try it out:</p>
+            <div class="note">
+              <p>While <a><code class="inline">chunks</code></a> method splits slice into sub-slices of unknown size from the language perspective (they are still <code class="inline">&amp;[u8]</code> &ndash; not <code class="inline">&amp;[u8; N]</code>), we can hope that <code class="inline">LLVM</code> aggressive inlining will help us here and optimizer will understand that slices are fixed sized after all inlining will happen under the hood.</p>
+            </div>
+            <p>[chunks]: https://doc.rust-lang.org/std/primitive.slice.html#method.chunks</p>
+            <pre class="language-rust"><code><span class="keyword">fn</span> <span class="function">find_no_early_returns</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> { ... }</code>
 <code><span class="keyword">pub</span> <span class="keyword">fn</span> <span class="function">find</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="identifier">haystack</span></code>
 <code>        .<span class="function">chunks</span>(<span class="number">32</span>)</code>
 <code>        .<span class="function">enumerate</span>()</code>
-<code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32</span> * <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
+<code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_no_early_returns</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32</span> * <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
 <code>}</code>
 </pre>
-      <p>Unfortunately, this doesn&rsquo;t work &ndash; the compiler again produces boring assembly with only unrolling optimization on. But, if we stop and think about it, this is actually expected! Chunking logic make every chunk unpredictable in size &ndash; because there is no guarantees about exact size of the last chunk (and every chunk can be the last one!).</p>
-      <p>Luckily, <code>Rust</code> developer team thought about this and added method <a href="https://doc.rust-lang.org/std/primitive.slice.html#method.chunks_exact"><code>chunks_exact</code></a> specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: <code>remainder</code>.</p>
-      <p>This final step allow us to make our dream come true: <a href="https://godbolt.org/z/Kja5WGjMf">vectorized <code>find</code> function</a> with only safe <code>Rust</code>!</p>
-      <pre class="language-rust"><code><span class="comment">// bonus: refactoring of find_branchless function to make it more elegant!</span></code>
-<code><span class="keyword">fn</span> <span class="function">find_branchless</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
+            <p>Unfortunately, this doesn&rsquo;t work &ndash; the compiler again produces boring assembly with only the unrolling optimization enabled. But, if we stop and think about it a bits, this is actually expected behaviour! The <a><code class="inline">chunks</code></a> method treats all chunks uniformly, including the last chunk &ndash; which can have a size less than 32 elements!</p>
+            <p>Luckily, <code class="inline">Rust</code> developer team thought about this and added method <a><code class="inline">chunks_exact</code></a> specifically for such cases! This method split slice in equally sized chunks and provides access to the tail of potentially smaller size through additional method: <code class="inline">remainder</code>.</p>
+            <p>[chunks_exact]: https://doc.rust-lang.org/std/primitive.slice.html#method.chunks_exact</p>
+            <p>This final step allows us to make our dream come true: a <a>vectorized <code class="inline">find</code> function</a> using only safe <code class="inline">Rust</code>!</p>
+            <p>[final vectorized]: https://godbolt.org/z/Ej3bx6c7f</p>
+            <pre class="language-rust"><code><span class="comment">// bonus: refactoring of find_branchless function to make it more elegant!</span></code>
+<code><span class="keyword">fn</span> <span class="function">find_no_early_returns</span>(<span class="identifier">haystack</span>: &[<span class="identifier">u8</span>], <span class="identifier">needle</span>: <span class="identifier">u8</span>) -> <span class="identifier">Option</span><<span class="identifier">usize</span>> {</code>
 <code>    <span class="keyword">return</span> <span class="identifier">haystack</span>.<span class="function">iter</span>().<span class="function">enumerate</span>()</code>
 <code>        .<span class="function">filter</span>(|(_, &<span class="identifier">b</span>)| <span class="identifier">b</span> == <span class="identifier">needle</span>)</code>
 <code>        .<span class="function">rfold</span>(<span class="identifier">None</span>, |_, (<span class="identifier">i</span>, _)| <span class="function">Some</span>(<span class="identifier">i</span>))</code>
@@ -141,41 +236,51 @@
 <code>    <span class="keyword">let</span> <span class="identifier">chunks</span> = <span class="identifier">haystack</span>.<span class="function">chunks_exact</span>(<span class="number">32</span>);</code>
 <code>    <span class="keyword">let</span> <span class="identifier">remainder</span> = <span class="identifier">chunks</span>.<span class="function">remainder</span>();</code>
 <code>    <span class="identifier">chunks</span>.<span class="function">enumerate</span>()</code>
-<code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_branchless</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32</span> * <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
-<code>        .<span class="function">or</span>(<span class="function">find_branchless</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| (<span class="identifier">haystack</span>.<span class="function">len</span>() & !<span class="number">0</span><span class="identifier">x1f</span>) + <span class="identifier">x</span>))</code>
+<code>        .<span class="function">find_map</span>(|(<span class="identifier">i</span>, <span class="identifier">chunk</span>)| <span class="function">find_no_early_returns</span>(<span class="identifier">chunk</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| <span class="number">32</span> * <span class="identifier">i</span> + <span class="identifier">x</span>) )</code>
+<code>        .<span class="function">or</span>(<span class="function">find_no_early_returns</span>(<span class="identifier">remainder</span>, <span class="identifier">needle</span>).<span class="function">map</span>(|<span class="identifier">x</span>| (<span class="identifier">haystack</span>.<span class="function">len</span>() & !<span class="number">0</span><span class="identifier">x1f</span>) + <span class="identifier">x</span>))</code>
 <code>}</code>
 </pre>
-    </section>
-    <section id="Benchmarks">
-      <a class="heading-anchor" href="#Benchmarks"><h3>Benchmarks</h3>
-      </a><p>The full benchmark source code is available here: <a href="https://github.com/sivukhin/sivukhin.github.io/tree/master/rust-find-bench">./rust-find-bench</a></p>
-      <table>
-        <tr>
-          <th style="text-align: left;">method</th>
-          <th style="text-align: right;">time</th>
-          <th style="text-align: right;">speedup</th>
-        </tr>
-        <tr>
-          <td style="text-align: left;"><code>find_naive</code></td>
-          <td style="text-align: right;"><code>366.06 ns</code></td>
-          <td style="text-align: right;"><code>x1.0</code></td>
-        </tr>
-        <tr>
-          <td style="text-align: left;"><code>find_chunks</code></td>
-          <td style="text-align: right;"><code>414.06 ns</code></td>
-          <td style="text-align: right;"><code>x0.9</code></td>
-        </tr>
-        <tr>
-          <td style="text-align: left;"><code>find_chunks_exact</code></td>
-          <td style="text-align: right;"><code>133.53 ns</code></td>
-          <td style="text-align: right;"><code>x2.7</code></td>
-        </tr>
-        <tr>
-          <td style="text-align: left;"><code>find_chunks_exact_branchless</code></td>
-          <td style="text-align: right;"><code>40.48 ns</code></td>
-          <td style="text-align: right;"><strong><code>x9.0</code></strong></td>
-        </tr>
-      </table>
+          </section>
+          <section id="Conclusion-and-benchmarks">
+            <a class="heading-anchor" href="#Conclusion-and-benchmarks"><h3>Conclusion and benchmarks</h3>
+            </a><p>While <code class="inline">LLVM</code> is good at auto-vectorization, sometimes you need to push it a bit to make your case more obvious for optimization passes. And here <code class="inline">Rust</code> standard library combined with <code class="inline">LLVM</code> aggressive inlining will allow to make non-trivial structural changes in the code while keeping it completely safe (I imagine that <code class="inline">chunks_exact</code> method can be very helpful for various other cases).</p>
+            <p>Also, it was interesting to look how <code class="inline">LLVM</code> compiler hints can be exposed to the developer for more deep understanding of the compiler behavior (turned out this is very easy to do as <code class="inline">rustc</code> allow you to pass additional arguments to the <code class="inline">LLVM</code> compiler).</p>
+            <p>And as a final result, the <em>last</em> implementation of the <code class="inline">find</code> method is <strong><strong>9 times faster</strong></strong> than the <em>naive</em> implementation presented in the beginning of the article. You can find the full benchmark source code here: <a href="https://github.com/sivukhin/sivukhin.github.io/blob/master/rust-find-bench/benches/find.rs">./rust-find-bench</a></p>
+            <table>
+              <tr>
+                <th style="text-align: left;">method</th>
+                <th style="text-align: right;">time</th>
+                <th style="text-align: right;">speedup</th>
+                <th style="text-align: left;">description</th>
+              </tr>
+              <tr>
+                <td style="text-align: left;"><code class="inline">find_chunks_exact_branchless</code></td>
+                <td style="text-align: right;"><code class="inline">40.18ns</code></td>
+                <td style="text-align: right;"><strong><code class="inline">x9.0</code></strong></td>
+                <td style="text-align: left;">no-early-return version with <code class="inline">chunk_exact</code> method</td>
+              </tr>
+              <tr>
+                <td style="text-align: left;"><code class="inline">find_chunks_exact</code></td>
+                <td style="text-align: right;"><code class="inline">126.77ns</code></td>
+                <td style="text-align: right;"><code class="inline">x2.7</code></td>
+                <td style="text-align: left;">naive version with <code class="inline">chunks_exact</code> method</td>
+              </tr>
+              <tr>
+                <td style="text-align: left;"><code class="inline">find_naive</code></td>
+                <td style="text-align: right;"><code class="inline">356.07ns</code></td>
+                <td style="text-align: right;"><code class="inline">x1.0</code></td>
+                <td style="text-align: left;">naive version from the beginning of the article</td>
+              </tr>
+              <tr>
+                <td style="text-align: left;"><code class="inline">find_chunks</code></td>
+                <td style="text-align: right;"><code class="inline">510.16ns</code></td>
+                <td style="text-align: right;"><code class="inline">x0.7</code></td>
+                <td style="text-align: left;">naive version with <code class="inline">chunks</code> method</td>
+              </tr>
+            </table>
+          </section>
+        </div>
+      </div>
     </section>
 </div>
     <hr/>

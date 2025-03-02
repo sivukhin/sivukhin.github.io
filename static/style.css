@@ -40,6 +40,7 @@ blockquote {
 
 code.inline {
     font-size: 12pt;
+    color: dimgray;
 }
 
 code > .keyword {
@@ -172,6 +173,7 @@ tr > * {
 }
 
 .note {
+    margin-top: 16px;
     padding: 1px 8px;
     border-left: 5px solid orange;
     background-color: lightgoldenrodyellow;
