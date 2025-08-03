@@ -1,0 +1,17 @@
+{
+  "name": "turso-sync-javascript",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:napi-rs/package-template.git",
+  "license": "MIT",
+  "scripts": {
+    "vite-dev": "vite",
+    "vite-build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^7.0.6"
+  },
+  "dependencies": {
+    "@napi-rs/wasm-runtime": "^1.0.1"
+  }
+}
