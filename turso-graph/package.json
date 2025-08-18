@@ -1,0 +1,19 @@
+{
+  "name": "turso-doc",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3",
+    "vite": "^7.1.2"
+  },
+  "dependencies": {
+    "@tursodatabase/sync": "^0.1.4-pre.6",
+    "nanoid": "^5.1.5"
+  }
+}

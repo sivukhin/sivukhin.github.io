@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>turso-sync</title>
+  <script type="module" crossorigin src="/assets/index-Awb7Xt3r.js"></script>
+</head>
+
+<body>
+  <style>
+    #canvas {
+      border: 1px solid black;
+      margin-top: 10px;
+    }
+
+    .container {
+      display: block;
+      margin: auto;
+      text-align: center;
+      font-family: monospace;
+      width: 1000px;
+    }
+
+    .left {
+      text-align: left;
+      font-size: 10pt;
+    }
+  </style>
+  <div class="container">
+    <h1>turso-graph</h1>
+    <ul class="left">
+      <li>click empty space: add node</li>
+      <li>double-click on node: remove node</li>
+      <li>click on node: movement mode</li>
+      <li>mousedown on node and move: pull edge from the node</li>
+    </ul>
+    <div class="left">status: <span id="status">loading...</span></div>
+    <svg width="1000" height="600" id="canvas"></svg>
+  </div>
+</body>
+
+</html>
