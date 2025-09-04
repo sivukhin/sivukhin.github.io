@@ -140,11 +140,37 @@ async function render(duration: number) {
 
 }
 
-async function sync() {
+async function pull() {
   try {
-    await db.sync();
+    await db.pull(1000);
+  } catch (e) {
+    console.info(`failed to pull changes: ${e}`)
   } finally {
-    setTimeout(sync, (1 + Math.random()) * 1000);
+    setTimeout(pull, 0);
+  }
+}
+
+async function push() {
+  try {
+    let stats = await db.stats();
+    if (stats.operations > 0) {
+      await db.push();
+    }
+  } catch (e) {
+    console.info(`failed to push changes: ${e}`)
+  } finally {
+    setTimeout(push, 100);
+  }
+}
+
+async function stats() {
+  try {
+    let stats = await db.stats();
+    document.getElementById('status').innerText = `ready (changes: ${stats.operations}, wal: ${stats.wal})`;
+  } catch (e) {
+    console.info(`failed to update stats: ${e}`);
+  } finally {
+    setTimeout(stats, 100);
   }
 }
 
@@ -153,11 +179,15 @@ async function init() {
     path: ":memory:",
     url: `https://graph1-sivukhin.aws-eu-north-1.turso.io`,
     authToken: import.meta.env.VITE_TURSO_AUTH_TOKEN,
-    clientName: `turso-graph`
+    clientName: `turso-graph`,
+    protocolVersion: 'v1',
   });
   db = local;
   document.getElementById('status').innerText = 'ready';
-  sync()
+
+  pull();
+  push();
+  stats();
 
   setInterval(() => {
     if (rendering) { return; }
